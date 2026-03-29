@@ -984,7 +984,13 @@
   </div>
   <div class="hero-overlay"></div>
   <div class="hero-content">
-    <p class="hero-label">🏠 שכונת הכרמים &bull; <span style="font-size:1.1rem;font-weight:700;color:#E8CC7A;letter-spacing:0.25em;">שדרות</span> &bull; יציאה צפונית</p>
+    <div style="opacity:0;animation:fadeUp 0.8s ease 0.2s forwards;margin-bottom:1.2rem;">
+      <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.4rem,3.5vw,2.8rem);font-weight:700;color:var(--warm-white);line-height:1.3;margin:0;">
+        שכונת הכרמים
+        <span style="color:var(--gold);display:block;font-size:clamp(1.8rem,4.5vw,3.8rem);font-weight:900;">שדרות</span>
+        <span style="font-size:clamp(1rem,2vw,1.6rem);font-weight:400;color:rgba(253,250,245,0.7);letter-spacing:0.15em;">יציאה צפונית ✦ בניין פינתי</span>
+      </h2>
+    </div>
     <h1 class="hero-title">
       המקום שתקראו
       <span class="accent">לו בית</span>
@@ -1026,9 +1032,10 @@
   <p class="section-eyebrow reveal">סיור וירטואלי</p>
   <h2 class="section-title reveal">צפו בדירה מכל זווית</h2>
   <div class="video-frame reveal">
-    <div class="video-placeholder" onclick="alert('כאן מוטמע הסרטון שלך — הדבק קוד iframe של YouTube/Vimeo')">
+    <div class="video-placeholder" onclick="document.getElementById('video-msg').style.display='block'">
       <div class="play-btn"></div>
       <p>לחץ להפעלת סיור וידאו</p>
+      <p id="video-msg" style="display:none;color:var(--gold-light);font-size:0.8rem;margin-top:0.5rem;">להוספת סרטון: ערוך את הקובץ והחלף את ה-div בקוד iframe של YouTube</p>
     </div>
     <!-- Replace with: <iframe src="https://www.youtube.com/embed/YOUR_ID" ...></iframe> -->
   </div>
@@ -1088,7 +1095,7 @@
     <div class="adv-card">
       <div class="adv-icon">🏪</div>
       <h3 class="adv-title">מתחם "השדרה" מול הבית</h3>
-      <p class="adv-text">ממש מול הדירה — מתחם "השדרה" — חדר כושר, ביץ׳ קפה, מאפייה וסופרמרקט גדול. הכל רגע מהבית.</p>
+      <p class="adv-text">ממש מול הדירה — מתחם "השדרה" — חדר כושר, בית קפה, מאפייה וסופרמרקט גדול. הכל רגע מהבית.</p>
     </div>
 
     <div class="adv-card adv-card--gold">
@@ -1124,7 +1131,7 @@
     <div class="adv-card">
       <div class="adv-icon">🛏️</div>
       <h3 class="adv-title">יחידת הורים מושלמת</h3>
-      <p class="adv-text">יחידת הורים עם ממ"ד וארון קיר מעוצב בעבודת נגר פרטית — פרטיות, אחסון ויוקרה בחדר אחד.</p>
+      <p class="adv-text">יחידת הורים עם דלת נפרדת וחדר ארונות מנגרות פרטית — פרטיות, אחסון ויוקרה בחדר אחד.</p>
     </div>
 
   </div>
@@ -1144,12 +1151,12 @@
         </div>
         <div class="spec-item">
           <div class="spec-icon">📐</div>
-          <div class="spec-val">115</div>
+          <div class="spec-val">126</div>
           <div class="spec-label">מ"ר</div>
         </div>
         <div class="spec-item">
           <div class="spec-icon">🏢</div>
-          <div class="spec-val">קומה 3</div>
+          <div class="spec-val">קומה 1</div>
           <div class="spec-label">מתוך 8</div>
         </div>
         <div class="spec-item">
@@ -1171,7 +1178,6 @@
       <div class="amenities">
         <span class="amenity-tag">מרפסת סגורה</span>
         <span class="amenity-tag">מטבח מפואר</span>
-        <span class="amenity-tag">ממ"ד</span>
         <span class="amenity-tag">חניה בטאבו</span>
         <span class="amenity-tag">מחסן / קליניקה</span>
         <span class="amenity-tag">לובי מתחת</span>
@@ -1202,11 +1208,25 @@
   <p class="mortgage-subtitle reveal">חישוב מהיר ומיידי — ללא התחייבות</p>
 
   <div class="calc-wrapper reveal">
-    <div class="calc-grid">
+    <div class="calc-grid" style="grid-template-columns:1fr 1fr;">
       <div class="calc-field">
-        <label class="calc-label">סכום המשכנתא (₪)</label>
+        <label class="calc-label">מחיר הדירה (₪)</label>
         <div class="calc-input-wrap">
-          <input type="number" class="calc-input" id="loanAmount" value="1200000" min="100000" max="5000000" step="10000" oninput="calculateMortgage()">
+          <input type="number" class="calc-input" id="apartmentPrice" value="1640000" min="100000" step="10000" oninput="calculateMortgage()">
+          <span class="calc-suffix">₪</span>
+        </div>
+      </div>
+      <div class="calc-field">
+        <label class="calc-label">הון עצמי (₪)</label>
+        <div class="calc-input-wrap">
+          <input type="number" class="calc-input" id="equity" value="450000" min="0" step="10000" oninput="calculateMortgage()">
+          <span class="calc-suffix">₪</span>
+        </div>
+      </div>
+      <div class="calc-field">
+        <label class="calc-label">סכום המשכנתא — מחושב אוטומטית</label>
+        <div class="calc-input-wrap">
+          <input type="number" class="calc-input" id="loanAmount" value="1190000" readonly style="opacity:0.6;cursor:not-allowed;background:rgba(255,255,255,0.03);">
           <span class="calc-suffix">₪</span>
         </div>
       </div>
@@ -1217,18 +1237,11 @@
           <span class="calc-suffix">שנים</span>
         </div>
       </div>
-      <div class="calc-field">
+      <div class="calc-field" style="grid-column:1/-1;">
         <label class="calc-label">ריבית שנתית (%)</label>
-        <div class="calc-input-wrap">
+        <div class="calc-input-wrap" style="max-width:280px;">
           <input type="number" class="calc-input" id="interestRate" value="4.5" min="1" max="15" step="0.1" oninput="calculateMortgage()">
           <span class="calc-suffix">%</span>
-        </div>
-      </div>
-      <div class="calc-field">
-        <label class="calc-label">הון עצמי (₪)</label>
-        <div class="calc-input-wrap">
-          <input type="number" class="calc-input" id="equity" value="450000" min="0" step="10000" oninput="calculateMortgage()">
-          <span class="calc-suffix">₪</span>
         </div>
       </div>
     </div>
@@ -1278,9 +1291,9 @@
           <div class="contact-method-icon">💬</div>
           WhatsApp — זמין עכשיו
         </a>
-        <a href="mailto:adirlevy@email.com" class="contact-method">
+        <a href="/cdn-cgi/l/email-protection#5332373a213f36252a13363e323a3f7d303c3e" class="contact-method">
           <div class="contact-method-icon">✉️</div>
-          adirlevy@email.com
+          <span class="__cf_email__" data-cfemail="31505558435d54474871545c50585d1f525e5c">[email&#160;protected]</span>
         </a>
       </div>
       <div style="font-size:0.82rem;color:var(--muted);line-height:1.7;border-top:1px solid rgba(107,79,58,0.15);padding-top:1.2rem;">
@@ -1312,17 +1325,19 @@
   <p>© 2025 | כל הזכויות שמורות</p>
 </footer>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ===== MORTGAGE CALCULATOR =====
 function formatILS(num) {
   return '₪' + Math.round(num).toLocaleString('he-IL');
 }
 
 function calculateMortgage() {
-  const loan = parseFloat(document.getElementById('loanAmount').value) || 0;
+  const price = parseFloat(document.getElementById('apartmentPrice').value) || 1640000;
+  const equity = parseFloat(document.getElementById('equity').value) || 0;
+  const loan = Math.max(0, price - equity);
+  document.getElementById('loanAmount').value = loan;
   const years = parseFloat(document.getElementById('loanYears').value) || 25;
   const rate = parseFloat(document.getElementById('interestRate').value) / 100 / 12 || 0;
-  const equity = parseFloat(document.getElementById('equity').value) || 0;
   const months = years * 12;
 
   let monthly = 0;
@@ -1334,7 +1349,7 @@ function calculateMortgage() {
 
   const total = monthly * months;
   const totalInterest = total - loan;
-  const equityPct = loan > 0 ? Math.round((equity / (loan + equity)) * 100) : 0;
+  const equityPct = price > 0 ? Math.round((equity / price) * 100) : 0;
 
   document.getElementById('monthlyPayment').textContent = formatILS(monthly);
   document.getElementById('totalPayment').textContent = formatILS(total);
@@ -1398,9 +1413,4 @@ document.addEventListener('DOMContentLoaded', () => {
   <svg class="wa-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle cx="16" cy="16" r="16" fill="white" fill-opacity="0.15"/>
     <path d="M16 4C9.373 4 4 9.373 4 16c0 2.386.668 4.614 1.826 6.508L4 28l5.647-1.797A11.93 11.93 0 0016 28c6.627 0 12-5.373 12-12S22.627 4 16 4z" fill="white"/>
-    <path d="M22.5 19.5c-.3-.15-1.77-.873-2.044-.972-.274-.099-.473-.148-.673.149-.199.297-.772.972-.946 1.171-.174.199-.348.224-.647.075-.3-.15-1.265-.466-2.41-1.485-.89-.793-1.492-1.773-1.666-2.072-.174-.299-.018-.46.13-.608.134-.133.3-.348.449-.522.15-.174.2-.298.3-.497.1-.199.05-.373-.025-.522-.075-.149-.673-1.62-.922-2.218-.243-.583-.49-.504-.673-.513l-.573-.01c-.199 0-.522.075-.796.373-.274.298-1.047 1.023-1.047 2.494s1.072 2.893 1.221 3.092c.15.198 2.11 3.22 5.11 4.514.715.308 1.272.492 1.707.63.717.228 1.37.196 1.886.119.575-.085 1.77-.723 2.02-1.422.248-.698.248-1.297.173-1.422-.074-.124-.274-.199-.573-.348z" fill="#25D366"/>
-  </svg>
-  <span>שלח הודעה לאדיר</span>
-</a>
-</body>
-</html>
+    <path d="M22.5 19.5c-.3-.15-1.77-.873-2.044-.972-.274-.099-.473-.148-.673.149-.199.297-.772.972-.946 1.171-.174.199-.348.224-.647.075-.3-.15-1.265-.466-2.41-1.485-.89-.793-1.492-1.773-1.666-2.072-.174-.299-.018-.46.13-.608.134-.133.3-.348.449-.522.15-.174.2-.298.3-.497.1-.199.05-.373-.025-.522-.075-.149-.673-1.62-.922-2.218-.243-.583-.49-.504-.673-.513l-.573-.01c-.199 0-.522.075-.796.373-.274.298-1.047 1.023-1.047 2.494s1.072 2.893 1.221 3.092c.15.198 2.11 3.22 5.11 4
