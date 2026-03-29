@@ -384,6 +384,93 @@
     font-style: italic;
   }
 
+
+  /* ===== EXTRA PHOTOS ===== */
+  .extra-section {
+    padding: 5rem 8vw;
+    background: var(--charcoal);
+  }
+
+  .extra-section .section-title { color: var(--warm-white); }
+
+  .extra-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    max-width: 1100px;
+    margin: 2.5rem auto 0;
+  }
+
+  .extra-card {
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(201,168,76,0.15);
+    cursor: pointer;
+    transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+    background: rgba(255,255,255,0.03);
+  }
+
+  .extra-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    border-color: rgba(201,168,76,0.4);
+  }
+
+  .extra-img-wrap {
+    position: relative;
+    height: 220px;
+    overflow: hidden;
+  }
+
+  .extra-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s;
+  }
+
+  .extra-card:hover .extra-img-wrap img { transform: scale(1.05); }
+
+  .extra-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s;
+  }
+
+  .extra-card:hover .extra-overlay { background: rgba(0,0,0,0.25); }
+
+  .extra-card:hover .gallery-icon { opacity: 1; transform: scale(1); }
+
+  .extra-caption {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 1.1rem 1.3rem;
+  }
+
+  .extra-icon { font-size: 1.5rem; flex-shrink: 0; }
+
+  .extra-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--warm-white);
+    margin-bottom: 0.15rem;
+  }
+
+  .extra-sub {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  @media (max-width: 768px) {
+    .extra-grid { grid-template-columns: 1fr; }
+    .extra-img-wrap { height: 200px; }
+  }
+
   /* ===== ADVANTAGES ===== */
   .advantages-section {
     padding: 5rem 8vw;
@@ -1190,6 +1277,58 @@
 
 </section>
 
+
+<!-- EXTRA PHOTOS -->
+<section class="extra-section">
+  <p class="section-eyebrow reveal" style="text-align:center">פרטים נוספים</p>
+  <h2 class="section-title reveal" style="text-align:center;color:var(--charcoal)">לובי • תוכנית • מיקום</h2>
+  <div class="extra-grid reveal">
+
+    <div class="extra-card" onclick="openLightbox('apt_img_lobi.jpg','לובי הכניסה')">
+      <div class="extra-img-wrap">
+        <img src="apt_img_lobi.jpg" alt="לובי">
+        <div class="extra-overlay"><div class="gallery-icon">🔍</div></div>
+      </div>
+      <div class="extra-caption">
+        <span class="extra-icon">🏛️</span>
+        <div>
+          <div class="extra-title">לובי הכניסה</div>
+          <div class="extra-sub">לובי מפואר — הדירה ממש מעליו</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="extra-card" onclick="openLightbox('apt_img_tohnit.jpg','תוכנית הדירה')">
+      <div class="extra-img-wrap">
+        <img src="apt_img_tohnit.jpg" alt="תוכנית הדירה">
+        <div class="extra-overlay"><div class="gallery-icon">🔍</div></div>
+      </div>
+      <div class="extra-caption">
+        <span class="extra-icon">📐</span>
+        <div>
+          <div class="extra-title">תוכנית הדירה</div>
+          <div class="extra-sub">126 מ"ר • 4 חדרים • יחידת הורים</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="extra-card" onclick="openLightbox('apt_img_mikom.jpg','מיקום הדירה')">
+      <div class="extra-img-wrap">
+        <img src="apt_img_mikom.jpg" alt="מיקום">
+        <div class="extra-overlay"><div class="gallery-icon">🔍</div></div>
+      </div>
+      <div class="extra-caption">
+        <span class="extra-icon">📍</span>
+        <div>
+          <div class="extra-title">מיקום</div>
+          <div class="extra-sub">יציאה צפונית • מול מתחם "השדרה"</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
 <!-- ADVANTAGES -->
 <section class="advantages-section">
   <p class="section-eyebrow reveal" style="text-align:center">למה הדירה הזו</p>
@@ -1443,9 +1582,9 @@
           <div class="contact-method-icon">💬</div>
           WhatsApp — זמין עכשיו
         </a>
-        <a href="mailto:adir2112@gmail.com" class="contact-method">
+        <a href="/cdn-cgi/l/email-protection#31505558430300000371565c50585d1f525e5c" class="contact-method">
           <div class="contact-method-icon">✉️</div>
-          adir2112@gmail.com
+          <span class="__cf_email__" data-cfemail="0564616c7737343437456268646c692b666a68">[email&#160;protected]</span>
         </a>
       </div>
       <div style="font-size:0.82rem;color:var(--muted);line-height:1.7;border-top:1px solid rgba(107,79,58,0.15);padding-top:1.2rem;">
@@ -1483,7 +1622,7 @@
   <p>© 2025 | כל הזכויות שמורות</p>
 </footer>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ===== MORTGAGE CALCULATOR =====
 function formatILS(num) {
   return '₪' + Math.round(num).toLocaleString('he-IL');
@@ -1607,4 +1746,4 @@ document.addEventListener('DOMContentLoaded', () => {
   <svg class="wa-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle cx="16" cy="16" r="16" fill="white" fill-opacity="0.15"/>
     <path d="M16 4C9.373 4 4 9.373 4 16c0 2.386.668 4.614 1.826 6.508L4 28l5.647-1.797A11.93 11.93 0 0016 28c6.627 0 12-5.373 12-12S22.627 4 16 4z" fill="white"/>
-    <path d="M22.5 19.5c-.3-.15-1.77-.873-2.044-.972-.274-.099-.473-.148-.673.149-.199.297-.772.972-.946 1.171-.174.199-.348.224-.647.075-.3-.15-1.265-.466-2.41-1.485-.89-.793-1.492-1.773-1.666-2.072-.174-.299-.018-.46.13-.608.134-.133.3-.348.449-.522.15-.174.2-.298.3-.497.1-.199.05-.373-.025-.522-.075-.149-.673-1.62-.922-2.218-.243-.583-.49-.504-.673-.513l-.573-.01c-.199 0-.522.075-.796.373-.274.298-1.047 1.023-1.047 2.494s1.072 2.893 1.221 3.092c.15.198 2.11 3.22 5.11 4
+    <path d="M22.5 19.5c-.3-.15-1.77-.873-2.044-.972-.274-.099-.473-.148-.673.149-.199.297-.772.972-.946 1.171-.174.199-.348.224-.647.075-.3-.15-1.265-.466-2.41-1.485-.89-.793-1.492-1.773-1.666-2.072-.174-.299-.018-.46.13-.608.134-.133
