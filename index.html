@@ -1222,7 +1222,7 @@
       </div>
       <div class="hero-price">
         <div class="hero-price-label">מחיר מבוקש</div>
-        <div class="hero-price-val">₪1,640,000</div>
+        <div class="hero-price-val">₪1,590,000</div>
       </div>
     </div>
   </div>
@@ -1471,7 +1471,7 @@
       <div class="calc-field">
         <label class="calc-label">מחיר הדירה (₪)</label>
         <div class="calc-input-wrap">
-          <input type="number" class="calc-input" id="apartmentPrice" value="1640000" min="100000" step="10000" oninput="calculateMortgage()">
+          <input type="number" class="calc-input" id="apartmentPrice" value="1590000" min="100000" step="10000" oninput="calculateMortgage()">
           <span class="calc-suffix">₪</span>
         </div>
       </div>
@@ -1639,7 +1639,7 @@ function formatILS(num) {
 }
 
 function calculateMortgage() {
-  const price = parseFloat(document.getElementById('apartmentPrice').value) || 1640000;
+  const price = parseFloat(document.getElementById('apartmentPrice').value) || 1590000;
   const equity = parseFloat(document.getElementById('equity').value) || 0;
   const loan = Math.max(0, price - equity);
   document.getElementById('loanAmount').value = loan;
