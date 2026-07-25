@@ -92,6 +92,7 @@ create table if not exists tasks (
   description        text,
   status             text not null default 'idea' check (status in ('idea','agreed','done')),
   due_date           date,
+  cost               numeric(12,2),
   added_by_member_id uuid not null references members(id),
   created_at         timestamptz not null default now(),
   updated_at         timestamptz not null default now(),
@@ -308,3 +309,93 @@ grant execute on function public.logout() to anon, authenticated;
 
 -- ===== realtime: let the app live-refresh across devices during a meeting =====
 alter publication supabase_realtime add table public.expenses, public.tasks, public.documents;
+
+-- ===== category_deadlines: one deadline per (apartment, category) =====
+create table if not exists category_deadlines (
+  id           uuid primary key default gen_random_uuid(),
+  apartment_id uuid not null references apartments(id),
+  category     text not null check (category in
+                  ('kitchen','doors','marble_ceramic','electrical','plumbing','ac','garden_exterior','general')),
+  deadline     date not null,
+  updated_at   timestamptz not null default now(),
+  unique(apartment_id, category)
+);
+alter table category_deadlines enable row level security;
+
+drop policy if exists "family can read deadlines" on category_deadlines;
+drop policy if exists "family can write deadlines" on category_deadlines;
+drop policy if exists "family can update deadlines" on category_deadlines;
+drop policy if exists "family can delete deadlines" on category_deadlines;
+create policy "family can read deadlines" on category_deadlines for select to authenticated
+  using (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
+create policy "family can write deadlines" on category_deadlines for insert to authenticated
+  with check (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
+create policy "family can update deadlines" on category_deadlines for update to authenticated
+  using     (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()))
+  with check(exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
+create policy "family can delete deadlines" on category_deadlines for delete to authenticated
+  using (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
+
+-- ===== contacts: people/suppliers per apartment =====
+create table if not exists contacts (
+  id                 uuid primary key default gen_random_uuid(),
+  apartment_id       uuid not null references apartments(id),
+  category           text not null check (category in
+                        ('kitchen','doors','marble_ceramic','electrical','plumbing','ac','garden_exterior','general','contractor')),
+  name               text not null,
+  phone              text,
+  notes              text,
+  added_by_member_id uuid not null references members(id),
+  created_at         timestamptz not null default now()
+);
+create index if not exists idx_contacts_apartment on contacts(apartment_id, category);
+alter table contacts enable row level security;
+
+drop policy if exists "family can read contacts" on contacts;
+drop policy if exists "family can write contacts" on contacts;
+drop policy if exists "family can update contacts" on contacts;
+drop policy if exists "family can delete contacts" on contacts;
+create policy "family can read contacts" on contacts for select to authenticated
+  using (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
+create policy "family can write contacts" on contacts for insert to authenticated
+  with check (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
+create policy "family can update contacts" on contacts for update to authenticated
+  using     (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()))
+  with check(exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
+create policy "family can delete contacts" on contacts for delete to authenticated
+  using (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
+
+-- ===== furniture_items: post-move-in shopping/warranty list =====
+create table if not exists furniture_items (
+  id                 uuid primary key default gen_random_uuid(),
+  apartment_id       uuid not null references apartments(id),
+  category           text not null check (category in
+                        ('living_room','kitchen','bedrooms','appliances','general')),
+  title              text not null,
+  store              text,
+  price              numeric(12,2),
+  purchased          boolean not null default false,
+  warranty_until     date,
+  notes              text,
+  added_by_member_id uuid not null references members(id),
+  created_at         timestamptz not null default now(),
+  updated_at         timestamptz not null default now()
+);
+create index if not exists idx_furniture_apartment on furniture_items(apartment_id, category);
+alter table furniture_items enable row level security;
+
+drop policy if exists "family can read furniture" on furniture_items;
+drop policy if exists "family can write furniture" on furniture_items;
+drop policy if exists "family can update furniture" on furniture_items;
+drop policy if exists "family can delete furniture" on furniture_items;
+create policy "family can read furniture" on furniture_items for select to authenticated
+  using (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
+create policy "family can write furniture" on furniture_items for insert to authenticated
+  with check (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
+create policy "family can update furniture" on furniture_items for update to authenticated
+  using     (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()))
+  with check(exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
+create policy "family can delete furniture" on furniture_items for delete to authenticated
+  using (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
+
+alter publication supabase_realtime add table public.contacts, public.furniture_items, public.category_deadlines;

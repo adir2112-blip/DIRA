@@ -197,7 +197,31 @@
   .icon-btn { width: 30px; height: 30px; border-radius: 8px; background: rgba(28,28,30,0.06); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
 
   .cat-group { margin-bottom: 1.3rem; }
-  .cat-group h3 { font-size: 0.95rem; color: var(--brown); margin-bottom: 0.6rem; padding-right: 0.2rem; }
+  .cat-group h3 { font-size: 0.95rem; color: var(--brown); }
+  .cat-group-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; padding-right: 0.2rem; gap: 0.5rem; }
+  .deadline-tag {
+    font-size: 0.7rem; padding: 0.3rem 0.6rem; border-radius: 999px; background: var(--section-bg); color: var(--brown);
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .deadline-tag.overdue { background: rgba(181,69,58,0.15); color: var(--danger); }
+  .suggest-row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; }
+  .suggest-chip {
+    font-size: 0.75rem; padding: 0.4rem 0.7rem; border-radius: 999px; background: var(--section-bg); color: var(--brown);
+    border: 1px solid var(--border);
+  }
+  .contact-row { display: flex; align-items: center; gap: 0.8rem; }
+  .contact-avatar {
+    width: 40px; height: 40px; border-radius: 50%; background: var(--section-bg); display: flex;
+    align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;
+  }
+  .more-card {
+    display: flex; align-items: center; gap: 1rem; padding: 1.2rem; background: var(--warm-white);
+    border-radius: 14px; border: 1px solid var(--border); margin-bottom: 0.8rem; text-align: right; width: 100%;
+  }
+  .more-card .ic { font-size: 1.6rem; }
+  .more-card .txt b { display: block; font-size: 1rem; }
+  .more-card .txt span { font-size: 0.8rem; color: var(--muted); }
+  .back-row { display: flex; align-items: center; gap: 0.4rem; color: var(--muted); font-size: 0.9rem; margin-bottom: 0.9rem; }
 
   .empty-state { text-align: center; padding: 3rem 1rem; color: var(--muted); }
   .empty-state .em { font-size: 2rem; margin-bottom: 0.6rem; }
@@ -346,6 +370,9 @@
     <section id="view-costs" class="view hidden"></section>
     <section id="view-tasks" class="view hidden"></section>
     <section id="view-documents" class="view hidden"></section>
+    <section id="view-more" class="view hidden"></section>
+    <section id="view-contacts" class="view hidden"></section>
+    <section id="view-furniture" class="view hidden"></section>
   </main>
 
   <button class="fab hidden" id="fabAdd">+</button>
@@ -355,6 +382,7 @@
     <button class="tab-item" data-view="costs"><span class="ic">💰</span>עלויות</button>
     <button class="tab-item" data-view="tasks"><span class="ic">📋</span>משימות</button>
     <button class="tab-item" data-view="documents"><span class="ic">📎</span>מסמכים</button>
+    <button class="tab-item" data-view="more"><span class="ic">⋯</span>עוד</button>
   </nav>
 </div>
 
@@ -382,6 +410,34 @@ const CATEGORIES = [
 const catLabel = id => CATEGORIES.find(c => c.id === id)?.label || id;
 const catIcon = id => CATEGORIES.find(c => c.id === id)?.icon || '📌';
 
+const CONTACT_CATEGORIES = [
+  { id: 'contractor', label: 'קבלן', icon: '👷' },
+  ...CATEGORIES,
+];
+const contactCatLabel = id => CONTACT_CATEGORIES.find(c => c.id === id)?.label || id;
+const contactCatIcon = id => CONTACT_CATEGORIES.find(c => c.id === id)?.icon || '📌';
+
+const FURNITURE_CATEGORIES = [
+  { id: 'living_room', label: 'סלון',           icon: '🛋️' },
+  { id: 'kitchen',     label: 'מטבח',           icon: '🍽️' },
+  { id: 'bedrooms',    label: 'חדרי שינה',       icon: '🛏️' },
+  { id: 'appliances',  label: 'מכשירי חשמל',    icon: '🔌' },
+  { id: 'general',     label: 'כללי',            icon: '📌' },
+];
+const furnCatLabel = id => FURNITURE_CATEGORIES.find(c => c.id === id)?.label || id;
+const furnCatIcon = id => FURNITURE_CATEGORIES.find(c => c.id === id)?.icon || '📌';
+
+const SUGGESTED_ITEMS = {
+  kitchen: ['שקע לתנור אדים', 'נקודת מים למקרר', 'תאורת לד תחתית ארונות'],
+  doors: ['שינוי רוחב דלת ממ"ד', 'דלת פנימית נוספת', 'ידיות ומנעולים מיוחדים'],
+  marble_ceramic: ['שיש לאי במטבח', 'קרמיקה עד התקרה במקלחת', 'סף שיש בכניסה'],
+  electrical: ['נקודת טעינה לרכב חשמלי', 'נקודת רשת נוספת', 'תאורה חיצונית', 'נקודה למזגן מיני-מרכזי'],
+  plumbing: ['ברז חוץ לגינה', 'נקודת מים למדיח', 'נקודה למתקן סינון מים'],
+  ac: ['הכנה למיני מרכזי ביחידת הורים', 'נקודת ניקוז נוספת'],
+  garden_exterior: ['נקודת חשמל חיצונית', 'ברז נוסף בחצר', 'תאורת גינה'],
+  general: ['תוספת נקודת תאורה', 'שינוי מיקום מפסק חשמל ראשי'],
+};
+
 const EXPENSE_STATUSES = [
   { id: 'pending', label: 'ממתין לתשלום' },
   { id: 'paid',    label: 'שולם' },
@@ -396,6 +452,9 @@ let state = {
   expenses: [],
   tasks: [],
   documents: [],
+  contacts: [],
+  furnitureItems: [],
+  categoryDeadlines: [],
   realtimeChannel: null,
 };
 
@@ -625,14 +684,17 @@ function renderApartmentSwitch() {
 
 function setupTabbar() {
   document.querySelectorAll('.tab-item').forEach(btn => {
-    btn.addEventListener('click', () => {
-      state.currentView = btn.dataset.view;
-      document.querySelectorAll('.tab-item').forEach(b => b.classList.toggle('active', b === btn));
-      document.querySelectorAll('main .view').forEach(v => v.classList.add('hidden'));
-      $('#view-' + state.currentView).classList.remove('hidden');
-      renderCurrentView();
-    });
+    btn.addEventListener('click', () => switchView(btn.dataset.view));
   });
+}
+
+function switchView(view) {
+  state.currentView = view;
+  document.querySelectorAll('main .view').forEach(v => v.classList.add('hidden'));
+  $('#view-' + view).classList.remove('hidden');
+  const tabForView = (view === 'contacts' || view === 'furniture') ? 'more' : view;
+  document.querySelectorAll('.tab-item').forEach(b => b.classList.toggle('active', b.dataset.view === tabForView));
+  renderCurrentView();
 }
 
 function setupRealtime() {
@@ -642,6 +704,9 @@ function setupRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => refreshCurrentApartmentData())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => refreshCurrentApartmentData())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'documents' }, () => refreshCurrentApartmentData())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'contacts' }, () => refreshCurrentApartmentData())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'furniture_items' }, () => refreshCurrentApartmentData())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'category_deadlines' }, () => refreshCurrentApartmentData())
     .subscribe();
 }
 
@@ -653,14 +718,20 @@ function refreshCurrentApartmentData() {
 
 async function loadAllData() {
   const aptId = state.currentApartmentId;
-  const [expRes, taskRes, docRes] = await Promise.all([
+  const [expRes, taskRes, docRes, contactRes, furnRes, deadlineRes] = await Promise.all([
     supabase.from('expenses').select('*').eq('apartment_id', aptId).eq('is_deleted', false).order('expense_date', { ascending: false }),
     supabase.from('tasks').select('*').eq('apartment_id', aptId).order('created_at', { ascending: false }),
     supabase.from('documents').select('*').eq('apartment_id', aptId).order('created_at', { ascending: false }),
+    supabase.from('contacts').select('*').eq('apartment_id', aptId).order('created_at', { ascending: false }),
+    supabase.from('furniture_items').select('*').eq('apartment_id', aptId).order('created_at', { ascending: false }),
+    supabase.from('category_deadlines').select('*').eq('apartment_id', aptId),
   ]);
   state.expenses = expRes.data || [];
   state.tasks = taskRes.data || [];
   state.documents = docRes.data || [];
+  state.contacts = contactRes.data || [];
+  state.furnitureItems = furnRes.data || [];
+  state.categoryDeadlines = deadlineRes.data || [];
 }
 
 function renderCurrentView() {
@@ -669,6 +740,9 @@ function renderCurrentView() {
   if (state.currentView === 'costs') { renderCosts(); fab.classList.remove('hidden'); fab.onclick = () => openExpenseModal(); }
   if (state.currentView === 'tasks') { renderTasks(); fab.classList.remove('hidden'); fab.onclick = () => openTaskModal(); }
   if (state.currentView === 'documents') { renderDocuments(); fab.classList.remove('hidden'); fab.onclick = () => openDocumentModal(); }
+  if (state.currentView === 'more') { renderMoreMenu(); fab.classList.add('hidden'); }
+  if (state.currentView === 'contacts') { renderContacts(); fab.classList.remove('hidden'); fab.onclick = () => openContactModal(); }
+  if (state.currentView === 'furniture') { renderFurniture(); fab.classList.remove('hidden'); fab.onclick = () => openFurnitureModal(); }
 }
 
 // ===================== OVERVIEW =====================
@@ -825,6 +899,7 @@ function renderTasks() {
     <h2 class="view-title">צ'ק ליסט — שינוי דיירים</h2>
     <div class="filter-row" id="taskFilterRow"></div>
     <div id="taskGroups"></div>
+    <div class="stat-card wide" id="taskCostTotal" style="margin-top:0.9rem;"></div>
   `;
   const row = $('#taskFilterRow');
   TASK_FILTERS.forEach(f => {
@@ -838,6 +913,10 @@ function renderTasks() {
     if (taskFilter === 'done') return t.status === 'done';
     return true;
   });
+
+  const costTotal = filtered.reduce((s, t) => s + (t.cost ? Number(t.cost) : 0), 0);
+  $('#taskCostTotal').innerHTML = `<span>סה"כ עלות שינויים</span><span class="item-amount">${fmtMoney(costTotal)}</span>`;
+
   const groupsWrap = $('#taskGroups');
   if (filtered.length === 0) {
     groupsWrap.innerHTML = `<div class="empty-state"><div class="em">📋</div>אין משימות כאן</div>`;
@@ -854,7 +933,17 @@ function renderTasks() {
     });
     if (items.length === 0) return;
     const group = el('div', 'cat-group');
-    group.innerHTML = `<h3>${cat.icon} ${cat.label}</h3>`;
+    const deadline = state.categoryDeadlines.find(d => d.category === cat.id);
+    const deadlinePast = deadline && deadline.deadline < today;
+    group.innerHTML = `
+      <div class="cat-group-header">
+        <h3>${cat.icon} ${cat.label}</h3>
+        <button class="deadline-tag${deadlinePast ? ' overdue' : ''}" id="deadline-${cat.id}">
+          ${deadline ? `🔒 עד ${fmtDate(deadline.deadline)}` : '🔒 קבעו דדליין'}
+        </button>
+      </div>
+    `;
+    group.querySelector('.deadline-tag').addEventListener('click', () => openDeadlineModal(cat, deadline));
     const list = el('div', 'list');
     items.forEach(t => {
       const isDone = t.status === 'done';
@@ -870,6 +959,7 @@ function renderTasks() {
             <div class="item-meta">
               ${t.due_date ? `<span class="tag${overdue ? ' status-pending' : ''}">📅 ${fmtDate(t.due_date)}</span>` : ''}
               ${daysInfo ? `<span class="due-badge ${daysInfo.cls}">${daysInfo.label}</span>` : ''}
+              ${t.cost != null ? `<span class="tag">💰 ${fmtMoney(t.cost)}</span>` : ''}
             </div>
           </div>
           <div class="item-actions">
@@ -885,6 +975,36 @@ function renderTasks() {
     });
     group.appendChild(list);
     groupsWrap.appendChild(group);
+  });
+}
+
+function openDeadlineModal(cat, existing) {
+  openModal(`
+    <div class="modal-title">${cat.icon} דדליין לקטגוריה: ${cat.label}</div>
+    <div class="field"><label>עד מתי אפשר עדיין לבקש שינויים בתחום הזה?</label><input type="date" id="mDeadline" value="${existing ? existing.deadline : ''}"></div>
+    <div class="modal-actions">
+      ${existing ? '<button class="btn btn-danger btn-block" id="mClear">מחיקה</button>' : ''}
+      <button class="btn btn-ghost btn-block" id="mCancel">ביטול</button>
+      <button class="btn btn-gold btn-block" id="mSave">שמירה</button>
+    </div>
+  `);
+  $('#mCancel').addEventListener('click', closeModal);
+  if (existing) {
+    $('#mClear').addEventListener('click', async () => {
+      await supabase.from('category_deadlines').delete().eq('id', existing.id);
+      closeModal();
+      await loadAllData(); renderCurrentView(); toast('הדדליין הוסר');
+    });
+  }
+  $('#mSave').addEventListener('click', async () => {
+    const val = $('#mDeadline').value;
+    if (!val) { toast('נא לבחור תאריך', true); return; }
+    const { error } = await supabase.from('category_deadlines').upsert({
+      apartment_id: state.currentApartmentId, category: cat.id, deadline: val,
+    }, { onConflict: 'apartment_id,category' });
+    if (error) { toast('שגיאה בשמירה', true); return; }
+    closeModal();
+    await loadAllData(); renderCurrentView(); toast('נשמר בהצלחה');
   });
 }
 
@@ -910,9 +1030,13 @@ function openTaskModal(existing) {
   const modal = openModal(`
     <div class="modal-title">${isEdit ? 'עריכת משימה' : 'משימה חדשה'}</div>
     <div class="cat-picker" id="mCatPicker"></div>
+    <div class="suggest-row" id="mSuggestRow"></div>
     <div class="field"><label>כותרת</label><input type="text" id="mTitle" value="${isEdit ? escapeHtml(existing.title) : ''}" placeholder="למשל: נקודת מים בגינה ליד המרפסת"></div>
     <div class="field"><label>פירוט (אופציונלי)</label><textarea id="mTaskDesc" rows="3">${isEdit ? escapeHtml(existing.description || '') : ''}</textarea></div>
-    <div class="field"><label>תאריך צפוי לביצוע (אופציונלי)</label><input type="date" id="mDueDate" value="${isEdit ? (existing.due_date || '') : ''}"></div>
+    <div class="field-row">
+      <div class="field"><label>תאריך צפוי לביצוע (אופציונלי)</label><input type="date" id="mDueDate" value="${isEdit ? (existing.due_date || '') : ''}"></div>
+      <div class="field"><label>עלות השינוי (אופציונלי, ₪)</label><input type="number" id="mTaskCost" min="0" step="1" value="${isEdit && existing.cost != null ? existing.cost : ''}"></div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost btn-block" id="mCancel">ביטול</button>
       <button class="btn btn-gold btn-block" id="mSave">שמירה</button>
@@ -920,18 +1044,30 @@ function openTaskModal(existing) {
   `);
 
   let selCat = existing?.category || 'general';
-  renderCatPicker($('#mCatPicker'), selCat, c => selCat = c);
+  renderCatPicker($('#mCatPicker'), selCat, c => { selCat = c; renderSuggestRow(); });
+  function renderSuggestRow() {
+    const row = $('#mSuggestRow');
+    row.innerHTML = '';
+    (SUGGESTED_ITEMS[selCat] || []).forEach(s => {
+      const chip = el('button', 'suggest-chip', s);
+      chip.addEventListener('click', () => { $('#mTitle').value = s; });
+      row.appendChild(chip);
+    });
+  }
+  renderSuggestRow();
 
   $('#mCancel').addEventListener('click', closeModal);
   $('#mSave').addEventListener('click', async () => {
     const title = $('#mTitle').value.trim();
     const description = $('#mTaskDesc').value.trim();
     const dueDate = $('#mDueDate').value || null;
+    const costVal = $('#mTaskCost').value;
+    const cost = costVal === '' ? null : parseFloat(costVal);
     if (!title) { toast('נא למלא כותרת', true); return; }
 
     const payload = {
       apartment_id: state.currentApartmentId,
-      category: selCat, title, description: description || null, due_date: dueDate,
+      category: selCat, title, description: description || null, due_date: dueDate, cost,
     };
     let error;
     if (isEdit) {
@@ -1056,10 +1192,235 @@ function openDocumentModal() {
   });
 }
 
+// ===================== MORE MENU =====================
+function renderMoreMenu() {
+  const v = $('#view-more');
+  v.innerHTML = `
+    <h2 class="view-title">עוד</h2>
+    <button class="more-card" id="moreContacts">
+      <span class="ic">📇</span>
+      <span class="txt"><b>אנשי קשר וספקים</b><span>קבלן, מטבחים, דלתות ועוד</span></span>
+    </button>
+    <button class="more-card" id="moreFurniture">
+      <span class="ic">🛋️</span>
+      <span class="txt"><b>ריהוט, ציוד ואחריות</b><span>רשימת קניות לאחרי הכניסה לדירה</span></span>
+    </button>
+  `;
+  $('#moreContacts').addEventListener('click', () => switchView('contacts'));
+  $('#moreFurniture').addEventListener('click', () => switchView('furniture'));
+}
+
+// ===================== CONTACTS =====================
+function renderContacts() {
+  const v = $('#view-contacts');
+  v.innerHTML = `
+    <button class="back-row" id="backToMore">→ עוד</button>
+    <h2 class="view-title">אנשי קשר וספקים</h2>
+    <div id="contactGroups"></div>
+  `;
+  $('#backToMore').addEventListener('click', () => switchView('more'));
+
+  const wrap = $('#contactGroups');
+  if (state.contacts.length === 0) {
+    wrap.innerHTML = `<div class="empty-state"><div class="em">📇</div>אין עדיין אנשי קשר</div>`;
+    return;
+  }
+  CONTACT_CATEGORIES.forEach(cat => {
+    const items = state.contacts.filter(c => c.category === cat.id);
+    if (items.length === 0) return;
+    const group = el('div', 'cat-group');
+    group.innerHTML = `<h3>${cat.icon} ${cat.label}</h3>`;
+    const list = el('div', 'list');
+    items.forEach(c => {
+      const card = el('div', 'item-card');
+      card.innerHTML = `
+        <div class="contact-row">
+          <div class="contact-avatar">${(c.name || '?').trim()[0] || '?'}</div>
+          <div style="flex:1;">
+            <div class="item-title">${escapeHtml(c.name)}</div>
+            ${c.phone ? `<a href="tel:${escapeHtml(c.phone)}" class="item-desc" style="color:var(--brown);">📞 ${escapeHtml(c.phone)}</a>` : ''}
+            ${c.notes ? `<div class="item-desc">${escapeHtml(c.notes)}</div>` : ''}
+          </div>
+          <div class="item-actions">
+            <button class="icon-btn btn-edit">✏️</button>
+            <button class="icon-btn btn-del">🗑️</button>
+          </div>
+        </div>
+      `;
+      card.querySelector('.btn-edit').addEventListener('click', () => openContactModal(c));
+      card.querySelector('.btn-del').addEventListener('click', () => deleteContact(c.id));
+      list.appendChild(card);
+    });
+    group.appendChild(list);
+    wrap.appendChild(group);
+  });
+}
+
+async function deleteContact(id) {
+  if (!confirm('למחוק את איש הקשר?')) return;
+  const { error } = await supabase.from('contacts').delete().eq('id', id);
+  if (error) { toast('שגיאה במחיקה', true); return; }
+  await loadAllData(); renderCurrentView(); toast('נמחק');
+}
+
+function openContactModal(existing) {
+  const isEdit = !!existing;
+  openModal(`
+    <div class="modal-title">${isEdit ? 'עריכת איש קשר' : 'איש קשר חדש'}</div>
+    <div class="cat-picker" id="mCatPicker"></div>
+    <div class="field"><label>שם</label><input type="text" id="mName" value="${isEdit ? escapeHtml(existing.name) : ''}" placeholder="לדוגמה: יוסי - קבלן ראשי"></div>
+    <div class="field"><label>טלפון</label><input type="tel" id="mPhone" value="${isEdit ? escapeHtml(existing.phone || '') : ''}"></div>
+    <div class="field"><label>הערות (אופציונלי)</label><textarea id="mContactNotes" rows="2">${isEdit ? escapeHtml(existing.notes || '') : ''}</textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-block" id="mCancel">ביטול</button>
+      <button class="btn btn-gold btn-block" id="mSave">שמירה</button>
+    </div>
+  `);
+
+  let selCat = existing?.category || 'contractor';
+  renderCatPicker($('#mCatPicker'), selCat, c => selCat = c, CONTACT_CATEGORIES);
+
+  $('#mCancel').addEventListener('click', closeModal);
+  $('#mSave').addEventListener('click', async () => {
+    const name = $('#mName').value.trim();
+    const phone = $('#mPhone').value.trim();
+    const notes = $('#mContactNotes').value.trim();
+    if (!name) { toast('נא למלא שם', true); return; }
+
+    const payload = { apartment_id: state.currentApartmentId, category: selCat, name, phone: phone || null, notes: notes || null };
+    let error;
+    if (isEdit) {
+      ({ error } = await supabase.from('contacts').update(payload).eq('id', existing.id));
+    } else {
+      payload.added_by_member_id = state.member.id;
+      ({ error } = await supabase.from('contacts').insert(payload));
+    }
+    if (error) { toast('שגיאה בשמירה', true); return; }
+    closeModal();
+    await loadAllData(); renderCurrentView(); toast('נשמר בהצלחה');
+  });
+}
+
+// ===================== FURNITURE / POST MOVE-IN =====================
+function renderFurniture() {
+  const v = $('#view-furniture');
+  v.innerHTML = `
+    <button class="back-row" id="backToMore">→ עוד</button>
+    <h2 class="view-title">ריהוט, ציוד ואחריות</h2>
+    <div id="furnGroups"></div>
+    <div class="stat-card wide" id="furnTotal" style="margin-top:0.9rem;"></div>
+  `;
+  $('#backToMore').addEventListener('click', () => switchView('more'));
+
+  const total = state.furnitureItems.reduce((s, f) => s + (f.price ? Number(f.price) : 0), 0);
+  $('#furnTotal').innerHTML = `<span>סה"כ עלות ריהוט וציוד</span><span class="item-amount">${fmtMoney(total)}</span>`;
+
+  const wrap = $('#furnGroups');
+  if (state.furnitureItems.length === 0) {
+    wrap.innerHTML = `<div class="empty-state"><div class="em">🛋️</div>אין עדיין פריטים ברשימה</div>`;
+    return;
+  }
+  FURNITURE_CATEGORIES.forEach(cat => {
+    const items = state.furnitureItems.filter(f => f.category === cat.id)
+      .sort((a, b) => (a.purchased === b.purchased) ? 0 : (a.purchased ? 1 : -1));
+    if (items.length === 0) return;
+    const group = el('div', 'cat-group');
+    group.innerHTML = `<h3>${cat.icon} ${cat.label}</h3>`;
+    const list = el('div', 'list');
+    items.forEach(f => {
+      const card = el('div', 'item-card');
+      card.innerHTML = `
+        <div class="check-row">
+          <button class="checkbox${f.purchased ? ' checked' : ''}" aria-label="נרכש"></button>
+          <div style="flex:1;">
+            <div class="item-title${f.purchased ? ' done' : ''}">${escapeHtml(f.title)}</div>
+            ${f.store ? `<div class="item-desc">${escapeHtml(f.store)}</div>` : ''}
+            <div class="item-meta">
+              ${f.price != null ? `<span class="tag">💰 ${fmtMoney(f.price)}</span>` : ''}
+              ${f.warranty_until ? `<span class="tag">🛡️ אחריות עד ${fmtDate(f.warranty_until)}</span>` : ''}
+            </div>
+          </div>
+          <div class="item-actions">
+            <button class="icon-btn btn-edit">✏️</button>
+            <button class="icon-btn btn-del">🗑️</button>
+          </div>
+        </div>
+      `;
+      card.querySelector('.checkbox').addEventListener('click', () => toggleFurniturePurchased(f));
+      card.querySelector('.btn-edit').addEventListener('click', () => openFurnitureModal(f));
+      card.querySelector('.btn-del').addEventListener('click', () => deleteFurnitureItem(f.id));
+      list.appendChild(card);
+    });
+    group.appendChild(list);
+    wrap.appendChild(group);
+  });
+}
+
+async function toggleFurniturePurchased(f) {
+  const { error } = await supabase.from('furniture_items').update({ purchased: !f.purchased }).eq('id', f.id);
+  if (error) { toast('שגיאה בעדכון', true); return; }
+  await loadAllData(); renderCurrentView();
+}
+
+async function deleteFurnitureItem(id) {
+  if (!confirm('למחוק את הפריט?')) return;
+  const { error } = await supabase.from('furniture_items').delete().eq('id', id);
+  if (error) { toast('שגיאה במחיקה', true); return; }
+  await loadAllData(); renderCurrentView(); toast('נמחק');
+}
+
+function openFurnitureModal(existing) {
+  const isEdit = !!existing;
+  openModal(`
+    <div class="modal-title">${isEdit ? 'עריכת פריט' : 'פריט חדש'}</div>
+    <div class="cat-picker" id="mCatPicker"></div>
+    <div class="field"><label>שם הפריט</label><input type="text" id="mFurnTitle" value="${isEdit ? escapeHtml(existing.title) : ''}" placeholder="לדוגמה: ספה תלת מושבית"></div>
+    <div class="field-row">
+      <div class="field"><label>חנות/ספק (אופציונלי)</label><input type="text" id="mFurnStore" value="${isEdit ? escapeHtml(existing.store || '') : ''}"></div>
+      <div class="field"><label>מחיר (אופציונלי, ₪)</label><input type="number" id="mFurnPrice" min="0" step="1" value="${isEdit && existing.price != null ? existing.price : ''}"></div>
+    </div>
+    <div class="field"><label>תוקף אחריות (אופציונלי)</label><input type="date" id="mFurnWarranty" value="${isEdit ? (existing.warranty_until || '') : ''}"></div>
+    <div class="field"><label>הערות (אופציונלי)</label><textarea id="mFurnNotes" rows="2">${isEdit ? escapeHtml(existing.notes || '') : ''}</textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-block" id="mCancel">ביטול</button>
+      <button class="btn btn-gold btn-block" id="mSave">שמירה</button>
+    </div>
+  `);
+
+  let selCat = existing?.category || 'general';
+  renderCatPicker($('#mCatPicker'), selCat, c => selCat = c, FURNITURE_CATEGORIES);
+
+  $('#mCancel').addEventListener('click', closeModal);
+  $('#mSave').addEventListener('click', async () => {
+    const title = $('#mFurnTitle').value.trim();
+    const store = $('#mFurnStore').value.trim();
+    const priceVal = $('#mFurnPrice').value;
+    const price = priceVal === '' ? null : parseFloat(priceVal);
+    const warranty = $('#mFurnWarranty').value || null;
+    const notes = $('#mFurnNotes').value.trim();
+    if (!title) { toast('נא למלא שם פריט', true); return; }
+
+    const payload = {
+      apartment_id: state.currentApartmentId, category: selCat, title,
+      store: store || null, price, warranty_until: warranty, notes: notes || null,
+    };
+    let error;
+    if (isEdit) {
+      ({ error } = await supabase.from('furniture_items').update(payload).eq('id', existing.id));
+    } else {
+      payload.added_by_member_id = state.member.id;
+      ({ error } = await supabase.from('furniture_items').insert(payload));
+    }
+    if (error) { toast('שגיאה בשמירה', true); return; }
+    closeModal();
+    await loadAllData(); renderCurrentView(); toast('נשמר בהצלחה');
+  });
+}
+
 // ===================== SHARED UI HELPERS =====================
-function renderCatPicker(container, selected, onPick) {
+function renderCatPicker(container, selected, onPick, categories = CATEGORIES) {
   container.innerHTML = '';
-  CATEGORIES.forEach(c => {
+  categories.forEach(c => {
     const item = el('div', 'cat-pick-item' + (c.id === selected ? ' active' : ''), `<span class="ic">${c.icon}</span>${c.label}`);
     item.addEventListener('click', () => {
       selected = c.id;
