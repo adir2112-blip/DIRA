@@ -6,6 +6,12 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMxQzFDMUUiLz4KICA8dGV4dCB4PSIzMiIgeT0iNDEiIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLCBUaW1lcywgc2VyaWYiIGZvbnQtc2l6ZT0iMjQiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiNDOUE4NEMiIHRleHQtYW5jaG9yPSJtaWRkbGUiPteZLteTPC90ZXh0Pgo8L3N2Zz4=">
 <title>רכישת דירות י.ד בנגב</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#1C1C1E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="י.ד בנגב">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Heebo:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -141,9 +147,14 @@
   .top-bar {
     background: var(--charcoal); padding: 1rem 1.1rem 0.9rem; position: sticky; top: 0; z-index: 50;
   }
-  .top-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; }
-  .top-greeting { color: var(--warm-white); font-size: 0.9rem; }
+  .top-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; gap: 0.5rem; }
+  .top-greeting { color: var(--warm-white); font-size: 0.9rem; white-space: nowrap; }
   .top-greeting b { color: var(--gold-light); }
+  .top-actions { display: flex; align-items: center; gap: 0.4rem; }
+  .top-icon-btn {
+    width: 30px; height: 30px; border-radius: 8px; background: rgba(255,255,255,0.08); color: var(--warm-white);
+    font-size: 0.78rem; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
   .logout-btn { color: var(--muted); font-size: 0.82rem; text-decoration: underline; }
 
   .apt-switch { display: flex; gap: 0.5rem; background: rgba(255,255,255,0.06); padding: 0.3rem; border-radius: 12px; }
@@ -163,6 +174,12 @@
   .stat-card .n { font-size: 1.5rem; font-weight: 700; font-family: 'Playfair Display', serif; }
   .stat-card .l { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
   .stat-card.wide { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; }
+
+  .meter-track { height: 20px; border-radius: 999px; background: var(--section-bg); overflow: hidden; }
+  .meter-fill { height: 100%; border-radius: 999px; background: var(--gold); transition: width 0.4s ease; }
+  .bar-item { margin-bottom: 0.9rem; }
+  .bar-item:last-child { margin-bottom: 0; }
+  .bar-header { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.35rem; }
 
   /* lists */
   .list { display: flex; flex-direction: column; gap: 0.7rem; }
@@ -366,7 +383,12 @@
   <div class="top-bar">
     <div class="top-row">
       <div class="top-greeting">שלום, <b id="greetName"></b></div>
-      <button class="logout-btn" id="btnLogout">יציאה</button>
+      <div class="top-actions">
+        <button class="top-icon-btn" id="btnSearch" aria-label="חיפוש">🔍</button>
+        <button class="top-icon-btn" id="btnFontDown" aria-label="הקטן טקסט">A-</button>
+        <button class="top-icon-btn" id="btnFontUp" aria-label="הגדל טקסט">A+</button>
+        <button class="logout-btn" id="btnLogout">יציאה</button>
+      </div>
     </div>
     <div class="apt-switch" id="aptSwitch"></div>
   </div>
@@ -466,11 +488,29 @@ let state = {
   floorPlan: null,
   planPins: [],
   quotes: [],
+  memberNames: {},
   realtimeChannel: null,
 };
 
 const $ = sel => document.querySelector(sel);
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+
+// ===================== FONT SCALE =====================
+const FONT_SCALES = [15, 16, 18, 20, 22];
+function applyFontScale(px) {
+  document.documentElement.style.fontSize = px + 'px';
+  localStorage.setItem('dira_fontscale', String(px));
+}
+(function initFontScale() {
+  const saved = parseInt(localStorage.getItem('dira_fontscale'), 10);
+  applyFontScale(FONT_SCALES.includes(saved) ? saved : 16);
+})();
+function bumpFontScale(dir) {
+  const current = parseInt(localStorage.getItem('dira_fontscale'), 10) || 16;
+  const idx = FONT_SCALES.indexOf(current);
+  const nextIdx = Math.max(0, Math.min(FONT_SCALES.length - 1, idx + dir));
+  applyFontScale(FONT_SCALES[nextIdx]);
+}
 
 function showScreen(id) {
   ['screen-loading','screen-setup','screen-login-name','screen-login-pin','app-shell'].forEach(s => {
@@ -659,6 +699,9 @@ $('#btnLogout').addEventListener('click', async () => {
   if (state.realtimeChannel) { supabase.removeChannel(state.realtimeChannel); state.realtimeChannel = null; }
   location.reload();
 });
+$('#btnFontUp').addEventListener('click', () => bumpFontScale(1));
+$('#btnFontDown').addEventListener('click', () => bumpFontScale(-1));
+$('#btnSearch').addEventListener('click', openSearchModal);
 
 // ===================== APP =====================
 async function enterApp() {
@@ -668,6 +711,10 @@ async function enterApp() {
   if (error || !apts || apts.length === 0) { toast('שגיאה בטעינת הדירות', true); return; }
   state.apartments = apts;
   state.currentApartmentId = apts[0].id;
+
+  const { data: memberRows } = await supabase.rpc('list_members_with_ids');
+  state.memberNames = {};
+  (memberRows || []).forEach(m => { state.memberNames[m.id] = m.full_name; });
 
   renderApartmentSwitch();
   setupTabbar();
@@ -708,19 +755,41 @@ function switchView(view) {
   renderCurrentView();
 }
 
+const REALTIME_LABELS = {
+  expenses: row => `הוסיפו עלות: ${row.description}`,
+  tasks: row => `הוסיפו משימה: ${row.title}`,
+  documents: row => `העלו קובץ: ${row.title || row.file_name}`,
+  contacts: row => `הוסיפו איש קשר: ${row.name}`,
+  furniture_items: row => `הוסיפו פריט: ${row.title}`,
+  quotes: row => `הוסיפו הצעת מחיר: ${row.supplier_name}`,
+};
+
+function handleRealtimeEvent(table, payload) {
+  if (payload.eventType === 'INSERT') {
+    const row = payload.new;
+    const byId = row.added_by_member_id || row.uploaded_by_member_id;
+    if (row.apartment_id === state.currentApartmentId && byId && byId !== state.member.id) {
+      const name = state.memberNames[byId] || 'מישהו';
+      const labelFn = REALTIME_LABELS[table];
+      if (labelFn) toast(`${name} ${labelFn(row)}`);
+    }
+  }
+  refreshCurrentApartmentData();
+}
+
 function setupRealtime() {
   if (state.realtimeChannel) supabase.removeChannel(state.realtimeChannel);
   state.realtimeChannel = supabase
     .channel('dira-updates')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => refreshCurrentApartmentData())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => refreshCurrentApartmentData())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'documents' }, () => refreshCurrentApartmentData())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'contacts' }, () => refreshCurrentApartmentData())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'furniture_items' }, () => refreshCurrentApartmentData())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'category_deadlines' }, () => refreshCurrentApartmentData())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'floor_plans' }, () => refreshCurrentApartmentData())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_pins' }, () => refreshCurrentApartmentData())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, () => refreshCurrentApartmentData())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, (p) => handleRealtimeEvent('expenses', p))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, (p) => handleRealtimeEvent('tasks', p))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'documents' }, (p) => handleRealtimeEvent('documents', p))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'contacts' }, (p) => handleRealtimeEvent('contacts', p))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'furniture_items' }, (p) => handleRealtimeEvent('furniture_items', p))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'category_deadlines' }, (p) => handleRealtimeEvent('category_deadlines', p))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'floor_plans' }, (p) => handleRealtimeEvent('floor_plans', p))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_pins' }, (p) => handleRealtimeEvent('plan_pins', p))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, (p) => handleRealtimeEvent('quotes', p))
     .subscribe();
 }
 
@@ -774,6 +843,14 @@ function renderOverview() {
   const totalPending = state.expenses.filter(e => e.status === 'pending').reduce((s, e) => s + Number(e.amount), 0);
   const openTasks = state.tasks.filter(t => t.status !== 'done').length;
   const doneTasks = state.tasks.filter(t => t.status === 'done').length;
+  const totalTasks = state.tasks.length;
+  const donePct = totalTasks === 0 ? 0 : Math.round((doneTasks / totalTasks) * 100);
+
+  const byCategory = CATEGORIES
+    .map(c => ({ ...c, amount: state.expenses.filter(e => e.category === c.id).reduce((s, e) => s + Number(e.amount), 0) }))
+    .filter(c => c.amount > 0)
+    .sort((a, b) => b.amount - a.amount);
+  const maxAmount = byCategory.length ? byCategory[0].amount : 0;
 
   v.innerHTML = `
     <h2 class="view-title">סקירה כללית</h2>
@@ -785,6 +862,25 @@ function renderOverview() {
       <div class="stat-card wide"><span>סה"כ עלות רשומה</span><span class="item-amount">${fmtMoney(totalPaid + totalPending)}</span></div>
       <div class="stat-card wide"><span>קבצים ותמונות</span><span class="item-amount">${state.documents.length}</span></div>
     </div>
+
+    ${totalTasks > 0 ? `
+    <div class="card" style="margin-bottom:0.8rem;">
+      <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:0.5rem;">
+        <span>התקדמות משימות שינוי דיירים</span><b>${doneTasks} מתוך ${totalTasks} (${donePct}%)</b>
+      </div>
+      <div class="meter-track"><div class="meter-fill" style="width:${donePct}%"></div></div>
+    </div>` : ''}
+
+    ${byCategory.length ? `
+    <div class="card">
+      <div style="font-size:0.9rem;font-weight:600;margin-bottom:0.9rem;">עלויות לפי קטגוריה</div>
+      ${byCategory.map(c => `
+        <div class="bar-item">
+          <div class="bar-header"><span>${c.icon} ${c.label}</span><b>${fmtMoney(c.amount)}</b></div>
+          <div class="meter-track"><div class="meter-fill" style="width:${maxAmount ? (c.amount / maxAmount) * 100 : 0}%"></div></div>
+        </div>
+      `).join('')}
+    </div>` : ''}
   `;
 }
 
@@ -1666,6 +1762,51 @@ function openQuoteModal(existing) {
   });
 }
 
+// ===================== GLOBAL SEARCH =====================
+function openSearchModal() {
+  const modal = openModal(`
+    <div class="modal-title">חיפוש</div>
+    <div class="field"><input type="text" id="searchInput" placeholder="חפשו משימה, עלות, איש קשר..." autofocus></div>
+    <div id="searchResults" class="list"></div>
+  `);
+  const input = $('#searchInput');
+  input.addEventListener('input', () => renderSearchResults(input.value.trim()));
+  renderSearchResults('');
+  setTimeout(() => input.focus(), 50);
+}
+
+function renderSearchResults(q) {
+  const wrap = $('#searchResults');
+  if (!q) { wrap.innerHTML = `<div class="empty-state" style="padding:1.5rem;"><div class="em">🔍</div>הקלידו כדי לחפש בדירה הנוכחית</div>`; return; }
+  const needle = q.toLowerCase();
+  const results = [];
+
+  state.tasks.filter(t => (t.title + ' ' + (t.description || '')).toLowerCase().includes(needle))
+    .forEach(t => results.push({ icon: '📋', title: t.title, sub: catLabel(t.category), view: 'tasks' }));
+  state.expenses.filter(e => (e.description + ' ' + (e.notes || '')).toLowerCase().includes(needle))
+    .forEach(e => results.push({ icon: '💰', title: e.description, sub: fmtMoney(e.amount), view: 'costs' }));
+  state.contacts.filter(c => (c.name + ' ' + (c.notes || '')).toLowerCase().includes(needle))
+    .forEach(c => results.push({ icon: '📇', title: c.name, sub: contactCatLabel(c.category), view: 'contacts' }));
+  state.furnitureItems.filter(f => (f.title + ' ' + (f.store || '')).toLowerCase().includes(needle))
+    .forEach(f => results.push({ icon: '🛋️', title: f.title, sub: furnCatLabel(f.category), view: 'furniture' }));
+  state.quotes.filter(q2 => (q2.supplier_name + ' ' + (q2.notes || '')).toLowerCase().includes(needle))
+    .forEach(q2 => results.push({ icon: '📊', title: q2.supplier_name, sub: catLabel(q2.category), view: 'quotes' }));
+
+  if (results.length === 0) { wrap.innerHTML = `<div class="empty-state" style="padding:1.5rem;"><div class="em">🔍</div>אין תוצאות</div>`; return; }
+  wrap.innerHTML = '';
+  results.forEach(r => {
+    const item = el('div', 'item-card', `
+      <div class="contact-row">
+        <div class="contact-avatar">${r.icon}</div>
+        <div style="flex:1;"><div class="item-title">${escapeHtml(r.title)}</div><div class="item-desc">${escapeHtml(r.sub)}</div></div>
+      </div>
+    `);
+    item.style.cursor = 'pointer';
+    item.addEventListener('click', () => { closeModal(); switchView(r.view); });
+    wrap.appendChild(item);
+  });
+}
+
 // ===================== SHARED UI HELPERS =====================
 function renderCatPicker(container, selected, onPick, categories = CATEGORIES) {
   container.innerHTML = '';
@@ -1710,6 +1851,9 @@ function safeFileExt(file) {
 function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 // ===================== GO =====================
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
 bootstrap();
 </script>
 </body>

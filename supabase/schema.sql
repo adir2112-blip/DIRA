@@ -485,3 +485,16 @@ create policy "family can delete quotes" on quotes for delete to authenticated
   using (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
 
 alter publication supabase_realtime add table public.floor_plans, public.plan_pins, public.quotes;
+
+-- ===== RPC: id+name pairs for attributing realtime changes in the UI (no PII beyond first name) =====
+create or replace function public.list_members_with_ids()
+returns table(id uuid, full_name text)
+language sql
+security definer
+set search_path = public
+as $$
+  select id, full_name from members where is_active order by sort_order;
+$$;
+
+revoke all on function public.list_members_with_ids() from public;
+grant execute on function public.list_members_with_ids() to anon, authenticated;
