@@ -174,6 +174,12 @@
   }
   .checkbox.checked { background: var(--gold); }
   .checkbox.checked::after { content: '✓'; color: var(--charcoal); font-weight: 700; font-size: 0.95rem; }
+  .due-badge {
+    font-size: 0.75rem; font-weight: 700; padding: 0.28rem 0.6rem; border-radius: 999px;
+    background: rgba(90,122,90,0.15); color: var(--success);
+  }
+  .due-badge.soon { background: rgba(201,168,76,0.2); color: #8a6d1a; }
+  .due-badge.today, .due-badge.overdue { background: rgba(181,69,58,0.15); color: var(--danger); }
   .tag {
     font-size: 0.72rem; padding: 0.28rem 0.6rem; border-radius: 999px; background: var(--section-bg); color: var(--brown);
     font-weight: 500;
@@ -684,6 +690,17 @@ function renderOverview() {
 function fmtMoney(n) { return '₪' + Number(n).toLocaleString('he-IL', { maximumFractionDigits: 0 }); }
 function fmtDate(d) { return new Date(d).toLocaleDateString('he-IL'); }
 
+function daysUntilLabel(dueDateStr) {
+  const due = new Date(dueDateStr + 'T00:00:00');
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const diff = Math.round((due - now) / 86400000);
+  if (diff === 0) return { label: 'היום!', cls: 'today' };
+  if (diff === 1) return { label: 'מחר', cls: 'soon' };
+  if (diff > 1) return { label: `עוד ${diff} ימים`, cls: diff <= 3 ? 'soon' : '' };
+  return { label: `באיחור ${Math.abs(diff)} ימים`, cls: 'overdue' };
+}
+
 // ===================== COSTS =====================
 let costFilter = 'all';
 function renderCosts() {
@@ -837,6 +854,7 @@ function renderTasks() {
     items.forEach(t => {
       const isDone = t.status === 'done';
       const overdue = t.due_date && !isDone && t.due_date < today;
+      const daysInfo = (t.due_date && !isDone) ? daysUntilLabel(t.due_date) : null;
       const card = el('div', 'item-card');
       card.innerHTML = `
         <div class="check-row">
@@ -846,6 +864,7 @@ function renderTasks() {
             ${t.description ? `<div class="item-desc">${escapeHtml(t.description)}</div>` : ''}
             <div class="item-meta">
               ${t.due_date ? `<span class="tag${overdue ? ' status-pending' : ''}">📅 ${fmtDate(t.due_date)}</span>` : ''}
+              ${daysInfo ? `<span class="due-badge ${daysInfo.cls}">${daysInfo.label}</span>` : ''}
             </div>
           </div>
           <div class="item-actions">
