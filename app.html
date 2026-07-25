@@ -441,7 +441,7 @@ async function bootstrap() {
 function renderSetupScreen() {
   const wrap = $('#setupMembers');
   wrap.innerHTML = '';
-  const defaults = ['אני', 'אמא', 'אבא'];
+  const defaults = ['אני', 'הורים'];
   defaults.forEach((name, i) => {
     const row = el('div', 'setup-member-row');
     row.innerHTML = `
