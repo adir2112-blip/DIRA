@@ -91,6 +91,7 @@ create table if not exists tasks (
   title              text not null,
   description        text,
   status             text not null default 'idea' check (status in ('idea','agreed','done')),
+  due_date           date,
   added_by_member_id uuid not null references members(id),
   created_at         timestamptz not null default now(),
   updated_at         timestamptz not null default now(),

@@ -164,8 +164,16 @@
   .item-card { background: var(--warm-white); border-radius: 14px; padding: 1rem; border: 1px solid var(--border); }
   .item-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.6rem; }
   .item-title { font-weight: 600; font-size: 1rem; }
+  .item-title.done { text-decoration: line-through; color: var(--muted); }
   .item-desc { color: var(--muted); font-size: 0.85rem; margin-top: 0.25rem; line-height: 1.4; }
   .item-meta { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
+  .check-row { display: flex; align-items: flex-start; gap: 0.7rem; }
+  .checkbox {
+    width: 26px; height: 26px; border-radius: 8px; border: 2px solid var(--gold); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; margin-top: 2px; transition: background 0.15s;
+  }
+  .checkbox.checked { background: var(--gold); }
+  .checkbox.checked::after { content: '✓'; color: var(--charcoal); font-weight: 700; font-size: 0.95rem; }
   .tag {
     font-size: 0.72rem; padding: 0.28rem 0.6rem; border-radius: 999px; background: var(--section-bg); color: var(--brown);
     font-weight: 500;
@@ -363,11 +371,6 @@ const CATEGORIES = [
 const catLabel = id => CATEGORIES.find(c => c.id === id)?.label || id;
 const catIcon = id => CATEGORIES.find(c => c.id === id)?.icon || '📌';
 
-const TASK_STATUSES = [
-  { id: 'idea',   label: 'לבדוק' },
-  { id: 'agreed', label: 'סוכם עם הקבלן' },
-  { id: 'done',   label: 'בוצע' },
-];
 const EXPENSE_STATUSES = [
   { id: 'pending', label: 'ממתין לתשלום' },
   { id: 'paid',    label: 'שולם' },
@@ -791,51 +794,67 @@ function openExpenseModal(existing) {
 }
 
 // ===================== TASKS =====================
-let taskFilter = 'all';
+let taskFilter = 'open';
+const TASK_FILTERS = [{ id: 'open', label: 'פתוח' }, { id: 'done', label: 'בוצע' }, { id: 'all', label: 'הכל' }];
+
 function renderTasks() {
   const v = $('#view-tasks');
-  const filters = [{ id: 'all', label: 'הכל' }, ...TASK_STATUSES];
   v.innerHTML = `
-    <h2 class="view-title">משימות ובקשות לקבלן</h2>
+    <h2 class="view-title">צ'ק ליסט — שינוי דיירים</h2>
     <div class="filter-row" id="taskFilterRow"></div>
     <div id="taskGroups"></div>
   `;
   const row = $('#taskFilterRow');
-  filters.forEach(f => {
+  TASK_FILTERS.forEach(f => {
     const chip = el('button', 'filter-chip' + (taskFilter === f.id ? ' active' : ''), f.label);
     chip.addEventListener('click', () => { taskFilter = f.id; renderTasks(); });
     row.appendChild(chip);
   });
 
-  const filtered = state.tasks.filter(t => taskFilter === 'all' || t.status === taskFilter);
+  const filtered = state.tasks.filter(t => {
+    if (taskFilter === 'open') return t.status !== 'done';
+    if (taskFilter === 'done') return t.status === 'done';
+    return true;
+  });
   const groupsWrap = $('#taskGroups');
   if (filtered.length === 0) {
     groupsWrap.innerHTML = `<div class="empty-state"><div class="em">📋</div>אין משימות כאן</div>`;
     return;
   }
+  const today = new Date().toISOString().slice(0, 10);
   CATEGORIES.forEach(cat => {
-    const items = filtered.filter(t => t.category === cat.id);
+    const items = filtered.filter(t => t.category === cat.id).sort((a, b) => {
+      if (a.status !== b.status) return a.status === 'done' ? 1 : -1;
+      if (!a.due_date && !b.due_date) return 0;
+      if (!a.due_date) return 1;
+      if (!b.due_date) return -1;
+      return a.due_date.localeCompare(b.due_date);
+    });
     if (items.length === 0) return;
     const group = el('div', 'cat-group');
     group.innerHTML = `<h3>${cat.icon} ${cat.label}</h3>`;
     const list = el('div', 'list');
     items.forEach(t => {
+      const isDone = t.status === 'done';
+      const overdue = t.due_date && !isDone && t.due_date < today;
       const card = el('div', 'item-card');
       card.innerHTML = `
-        <div class="item-top">
-          <div>
-            <div class="item-title">${escapeHtml(t.title)}</div>
+        <div class="check-row">
+          <button class="checkbox${isDone ? ' checked' : ''}" aria-label="בוצע"></button>
+          <div style="flex:1;">
+            <div class="item-title${isDone ? ' done' : ''}">${escapeHtml(t.title)}</div>
             ${t.description ? `<div class="item-desc">${escapeHtml(t.description)}</div>` : ''}
+            <div class="item-meta">
+              ${t.due_date ? `<span class="tag${overdue ? ' status-pending' : ''}">📅 ${fmtDate(t.due_date)}</span>` : ''}
+            </div>
+          </div>
+          <div class="item-actions">
+            <button class="icon-btn btn-edit">✏️</button>
+            <button class="icon-btn btn-del">🗑️</button>
           </div>
         </div>
-        <div class="item-meta">
-          <span class="tag status-${t.status}">${TASK_STATUSES.find(s => s.id === t.status).label}</span>
-        </div>
-        <div class="item-actions" style="margin-top:0.7rem;">
-          <button class="icon-btn btn-edit">✏️</button>
-          <button class="icon-btn btn-del">🗑️</button>
-        </div>
       `;
+      card.querySelector('.checkbox').addEventListener('click', () => toggleTaskDone(t));
       card.querySelector('.btn-edit').addEventListener('click', () => openTaskModal(t));
       card.querySelector('.btn-del').addEventListener('click', () => deleteTask(t.id));
       list.appendChild(card);
@@ -843,6 +862,16 @@ function renderTasks() {
     group.appendChild(list);
     groupsWrap.appendChild(group);
   });
+}
+
+async function toggleTaskDone(t) {
+  const nowDone = t.status !== 'done';
+  const { error } = await supabase.from('tasks').update({
+    status: nowDone ? 'done' : 'idea',
+    resolved_at: nowDone ? new Date().toISOString() : null,
+  }).eq('id', t.id);
+  if (error) { toast('שגיאה בעדכון', true); return; }
+  await loadAllData(); renderCurrentView();
 }
 
 async function deleteTask(id) {
@@ -859,7 +888,7 @@ function openTaskModal(existing) {
     <div class="cat-picker" id="mCatPicker"></div>
     <div class="field"><label>כותרת</label><input type="text" id="mTitle" value="${isEdit ? escapeHtml(existing.title) : ''}" placeholder="למשל: נקודת מים בגינה ליד המרפסת"></div>
     <div class="field"><label>פירוט (אופציונלי)</label><textarea id="mTaskDesc" rows="3">${isEdit ? escapeHtml(existing.description || '') : ''}</textarea></div>
-    <div class="status-picker" id="mStatusPicker"></div>
+    <div class="field"><label>תאריך צפוי לביצוע (אופציונלי)</label><input type="date" id="mDueDate" value="${isEdit ? (existing.due_date || '') : ''}"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost btn-block" id="mCancel">ביטול</button>
       <button class="btn btn-gold btn-block" id="mSave">שמירה</button>
@@ -867,26 +896,25 @@ function openTaskModal(existing) {
   `);
 
   let selCat = existing?.category || 'general';
-  let selStatus = existing?.status || 'idea';
   renderCatPicker($('#mCatPicker'), selCat, c => selCat = c);
-  renderStatusPicker($('#mStatusPicker'), TASK_STATUSES, selStatus, s => selStatus = s);
 
   $('#mCancel').addEventListener('click', closeModal);
   $('#mSave').addEventListener('click', async () => {
     const title = $('#mTitle').value.trim();
     const description = $('#mTaskDesc').value.trim();
+    const dueDate = $('#mDueDate').value || null;
     if (!title) { toast('נא למלא כותרת', true); return; }
 
     const payload = {
       apartment_id: state.currentApartmentId,
-      category: selCat, title, description: description || null, status: selStatus,
-      resolved_at: selStatus === 'done' ? new Date().toISOString() : null,
+      category: selCat, title, description: description || null, due_date: dueDate,
     };
     let error;
     if (isEdit) {
       ({ error } = await supabase.from('tasks').update(payload).eq('id', existing.id));
     } else {
       payload.added_by_member_id = state.member.id;
+      payload.status = 'idea';
       ({ error } = await supabase.from('tasks').insert(payload));
     }
     if (error) { toast('שגיאה בשמירה', true); return; }
@@ -983,7 +1011,7 @@ function openDocumentModal() {
     const btn = $('#mUpload');
     btn.disabled = true; btn.textContent = 'מעלה...';
 
-    const path = `${state.currentApartmentId}/${selKind}/${crypto.randomUUID()}-${file.name}`;
+    const path = `${state.currentApartmentId}/${selKind}/${crypto.randomUUID()}${safeFileExt(file)}`;
     const { error: upErr } = await supabase.storage.from('attachments').upload(path, file);
     if (upErr) { toast('שגיאה בהעלאה', true); btn.disabled = false; btn.textContent = 'העלאה'; return; }
 
@@ -1038,6 +1066,13 @@ function openModal(innerHtml) {
   return overlay;
 }
 function closeModal() { $('#modalRoot').innerHTML = ''; }
+function safeFileExt(file) {
+  // Storage keys must be ASCII-safe; never build a path from the raw file name (breaks on Hebrew/emoji/etc).
+  const m = /\.([a-zA-Z0-9]{1,8})$/.exec(file.name || '');
+  if (m) return '.' + m[1].toLowerCase();
+  const byMime = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/heic': '.heic', 'image/webp': '.webp', 'application/pdf': '.pdf' };
+  return byMime[file.type] || '';
+}
 function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 // ===================== GO =====================
