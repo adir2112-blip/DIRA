@@ -1053,7 +1053,7 @@ function openExpenseModal(existing) {
 }
 
 // ===================== TASKS =====================
-let taskFilter = 'open';
+let taskFilter = 'all';
 let expandedTaskCats = new Set();
 const TASK_FILTERS = [{ id: 'open', label: 'פתוח' }, { id: 'done', label: 'בוצע' }, { id: 'all', label: 'הכל' }];
 
@@ -1087,7 +1087,6 @@ function renderTasks() {
 
   CATEGORIES.forEach(cat => {
     const items = filtered.filter(t => t.category === cat.id).sort((a, b) => {
-      if (a.status !== b.status) return a.status === 'done' ? 1 : -1;
       if (!a.due_date && !b.due_date) return 0;
       if (!a.due_date) return 1;
       if (!b.due_date) return -1;
