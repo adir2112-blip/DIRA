@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMxQzFDMUUiLz4KICA8cG9seWdvbiBwb2ludHM9IjMyLDggNTgsMzAgNTQsMzAgNTQsNTYgMzgsNTYgMzgsNDAgMjYsNDAgMjYsNTYgMTAsNTYgMTAsMzAgNiwzMCIgZmlsbD0iI0M5QTg0QyIvPgogIDxyZWN0IHg9IjI4IiB5PSI0MCIgd2lkdGg9IjgiIGhlaWdodD0iMTYiIGZpbGw9IiMxQzFDMUUiLz4KPC9zdmc+">
+<title>ניהול שיפוץ הדירות</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Heebo:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #F5F0E8;
+    --warm-white: #FDFAF5;
+    --charcoal: #1C1C1E;
+    --gold: #C9A84C;
+    --gold-light: #E8CC7A;
+    --brown: #6B4F3A;
+    --muted: #8A8480;
+    --section-bg: #F0EAE0;
+    --danger: #B5453A;
+    --success: #5A7A5A;
+    --border: rgba(28,28,30,0.1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: 'Heebo', sans-serif;
+    background: var(--cream);
+    color: var(--charcoal);
+    direction: rtl;
+    min-height: 100vh;
+  }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  input, textarea, select { font-family: inherit; }
+
+  .hidden { display: none !important; }
+
+  /* ===== shared bits ===== */
+  .brand {
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    color: var(--charcoal);
+  }
+  .eyebrow {
+    font-size: 0.7rem;
+    letter-spacing: 0.25em;
+    color: var(--gold);
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    padding: 0.85rem 1.4rem; border-radius: 10px; font-size: 0.95rem; font-weight: 500;
+    transition: transform 0.15s, opacity 0.15s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-gold { background: var(--gold); color: var(--charcoal); font-weight: 700; }
+  .btn-dark { background: var(--charcoal); color: var(--warm-white); }
+  .btn-ghost { background: rgba(28,28,30,0.06); color: var(--charcoal); }
+  .btn-danger { background: rgba(181,69,58,0.1); color: var(--danger); }
+  .btn-block { width: 100%; }
+  .btn:disabled { opacity: 0.5; pointer-events: none; }
+
+  .card {
+    background: var(--warm-white);
+    border-radius: 16px;
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+  }
+
+  .spinner {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 3px solid rgba(201,168,76,0.25); border-top-color: var(--gold);
+    animation: spin 0.7s linear infinite; margin: 0 auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .toast {
+    position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+    background: var(--charcoal); color: var(--warm-white); padding: 0.8rem 1.4rem;
+    border-radius: 10px; font-size: 0.9rem; z-index: 500; opacity: 0; pointer-events: none;
+    transition: opacity 0.25s, bottom 0.25s; max-width: 90vw; text-align: center;
+  }
+  .toast.show { opacity: 1; bottom: 100px; }
+  .toast.error { background: var(--danger); }
+
+  /* ===== centered auth screens ===== */
+  .auth-screen {
+    min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 2rem 1.5rem; background: linear-gradient(160deg, var(--charcoal), #0f0f10);
+  }
+  .auth-box { width: 100%; max-width: 420px; }
+  .auth-logo { text-align: center; margin-bottom: 2rem; }
+  .auth-logo .icon { font-size: 2.2rem; margin-bottom: 0.4rem; }
+  .auth-logo h1 { font-size: 1.5rem; color: var(--warm-white); }
+  .auth-logo p { color: var(--muted); font-size: 0.85rem; margin-top: 0.3rem; }
+  .auth-card { background: var(--warm-white); border-radius: 20px; padding: 1.75rem; }
+
+  .name-grid { display: grid; gap: 0.7rem; margin-bottom: 0.5rem; }
+  .name-btn {
+    display: flex; align-items: center; gap: 0.8rem; padding: 1rem 1.1rem;
+    background: var(--section-bg); border-radius: 12px; font-size: 1.05rem; font-weight: 500;
+    text-align: right; transition: background 0.15s;
+  }
+  .name-btn:active { background: var(--gold-light); }
+  .name-btn .av {
+    width: 38px; height: 38px; border-radius: 50%; background: var(--gold); color: var(--charcoal);
+    display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0;
+  }
+
+  .pin-dots { display: flex; justify-content: center; gap: 0.9rem; margin: 1.5rem 0; }
+  .pin-dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--gold); transition: background 0.15s; }
+  .pin-dot.filled { background: var(--gold); }
+  .pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.7rem; }
+  .pin-key {
+    aspect-ratio: 1; border-radius: 14px; background: var(--section-bg); font-size: 1.3rem; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; transition: background 0.1s;
+  }
+  .pin-key:active { background: var(--gold-light); }
+  .pin-key.wide { font-size: 0.95rem; color: var(--muted); }
+  .back-link { display: flex; align-items: center; gap: 0.3rem; color: var(--muted); font-size: 0.9rem; margin-bottom: 1rem; }
+
+  .field { margin-bottom: 1rem; }
+  .field label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; font-weight: 500; }
+  .field input, .field textarea, .field select {
+    width: 100%; padding: 0.8rem 0.9rem; border-radius: 10px; border: 1.5px solid var(--border);
+    background: var(--warm-white); font-size: 1rem; color: var(--charcoal);
+  }
+  .field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--gold); }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+
+  /* ===== app shell ===== */
+  #app-shell { min-height: 100vh; display: flex; flex-direction: column; padding-bottom: 78px; }
+
+  .top-bar {
+    background: var(--charcoal); padding: 1rem 1.1rem 0.9rem; position: sticky; top: 0; z-index: 50;
+  }
+  .top-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; }
+  .top-greeting { color: var(--warm-white); font-size: 0.9rem; }
+  .top-greeting b { color: var(--gold-light); }
+  .logout-btn { color: var(--muted); font-size: 0.82rem; text-decoration: underline; }
+
+  .apt-switch { display: flex; gap: 0.5rem; background: rgba(255,255,255,0.06); padding: 0.3rem; border-radius: 12px; }
+  .apt-tab {
+    flex: 1; padding: 0.65rem 0.5rem; border-radius: 9px; color: var(--muted); font-size: 0.88rem; font-weight: 500;
+    text-align: center; transition: background 0.2s, color 0.2s;
+  }
+  .apt-tab.active { background: var(--gold); color: var(--charcoal); font-weight: 700; }
+
+  main { flex: 1; padding: 1.1rem; max-width: 640px; margin: 0 auto; width: 100%; }
+
+  .view-title { font-family: 'Playfair Display', serif; font-size: 1.4rem; margin-bottom: 1rem; }
+
+  /* overview */
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 1.2rem; }
+  .stat-card { background: var(--warm-white); border-radius: 14px; padding: 1rem; border: 1px solid var(--border); }
+  .stat-card .n { font-size: 1.5rem; font-weight: 700; font-family: 'Playfair Display', serif; }
+  .stat-card .l { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
+  .stat-card.wide { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; }
+
+  /* lists */
+  .list { display: flex; flex-direction: column; gap: 0.7rem; }
+  .item-card { background: var(--warm-white); border-radius: 14px; padding: 1rem; border: 1px solid var(--border); }
+  .item-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.6rem; }
+  .item-title { font-weight: 600; font-size: 1rem; }
+  .item-desc { color: var(--muted); font-size: 0.85rem; margin-top: 0.25rem; line-height: 1.4; }
+  .item-meta { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
+  .tag {
+    font-size: 0.72rem; padding: 0.28rem 0.6rem; border-radius: 999px; background: var(--section-bg); color: var(--brown);
+    font-weight: 500;
+  }
+  .tag.status-pending, .tag.status-idea { background: rgba(201,168,76,0.18); color: #8a6d1a; }
+  .tag.status-agreed { background: rgba(107,79,58,0.15); color: var(--brown); }
+  .tag.status-paid, .tag.status-done { background: rgba(90,122,90,0.18); color: var(--success); }
+  .item-amount { font-weight: 700; font-size: 1.05rem; white-space: nowrap; }
+  .item-actions { display: flex; gap: 0.4rem; }
+  .icon-btn { width: 30px; height: 30px; border-radius: 8px; background: rgba(28,28,30,0.06); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+
+  .cat-group { margin-bottom: 1.3rem; }
+  .cat-group h3 { font-size: 0.95rem; color: var(--brown); margin-bottom: 0.6rem; padding-right: 0.2rem; }
+
+  .empty-state { text-align: center; padding: 3rem 1rem; color: var(--muted); }
+  .empty-state .em { font-size: 2rem; margin-bottom: 0.6rem; }
+
+  .filter-row { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.3rem; margin-bottom: 1rem; }
+  .filter-chip { flex-shrink: 0; padding: 0.45rem 0.9rem; border-radius: 999px; background: var(--warm-white); border: 1px solid var(--border); font-size: 0.82rem; color: var(--muted); }
+  .filter-chip.active { background: var(--charcoal); color: var(--warm-white); border-color: var(--charcoal); }
+
+  /* documents grid */
+  .doc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; }
+  .doc-tile { aspect-ratio: 1; border-radius: 12px; overflow: hidden; position: relative; background: var(--section-bg); }
+  .doc-tile img { width: 100%; height: 100%; object-fit: cover; }
+  .doc-tile .file-icon { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; }
+  .doc-tile .doc-label { position: absolute; bottom: 0; inset-inline: 0; background: rgba(0,0,0,0.55); color: #fff; font-size: 0.65rem; padding: 0.25rem 0.4rem; }
+
+  /* fab */
+  .fab {
+    position: fixed; bottom: 92px; left: 20px; width: 56px; height: 56px; border-radius: 50%;
+    background: var(--gold); color: var(--charcoal); font-size: 1.6rem; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 20px rgba(201,168,76,0.4); z-index: 60;
+  }
+
+  /* bottom tabbar */
+  .tabbar {
+    position: fixed; bottom: 0; inset-inline: 0; background: var(--warm-white); border-top: 1px solid var(--border);
+    display: flex; z-index: 70; padding-bottom: env(safe-area-inset-bottom);
+  }
+  .tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.2rem; padding: 0.6rem 0.2rem 0.5rem; color: var(--muted); font-size: 0.68rem; }
+  .tab-item .ic { font-size: 1.2rem; }
+  .tab-item.active { color: var(--gold); font-weight: 600; }
+
+  /* modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: flex; align-items: flex-end;
+  }
+  .modal-sheet {
+    background: var(--cream); width: 100%; max-height: 88vh; overflow-y: auto; border-radius: 20px 20px 0 0;
+    padding: 1.3rem 1.2rem calc(1.5rem + env(safe-area-inset-bottom));
+  }
+  .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 4px; margin: 0 auto 1rem; }
+  .modal-title { font-family: 'Playfair Display', serif; font-size: 1.25rem; margin-bottom: 1.1rem; }
+  .cat-picker { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 1rem; }
+  .cat-pick-item { text-align: center; padding: 0.6rem 0.3rem; border-radius: 10px; background: var(--warm-white); border: 1.5px solid var(--border); font-size: 0.68rem; }
+  .cat-pick-item .ic { font-size: 1.2rem; display: block; margin-bottom: 0.2rem; }
+  .cat-pick-item.active { border-color: var(--gold); background: rgba(201,168,76,0.12); }
+  .status-picker { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+  .status-pick-item { flex: 1; text-align: center; padding: 0.6rem; border-radius: 10px; background: var(--warm-white); border: 1.5px solid var(--border); font-size: 0.82rem; }
+  .status-pick-item.active { border-color: var(--gold); background: rgba(201,168,76,0.12); font-weight: 600; }
+  .modal-actions { display: flex; gap: 0.6rem; margin-top: 1.2rem; }
+  .file-drop {
+    border: 1.5px dashed var(--border); border-radius: 12px; padding: 1.2rem; text-align: center; color: var(--muted);
+    font-size: 0.85rem; margin-bottom: 1rem;
+  }
+  .preview-thumb { width: 100%; max-height: 160px; object-fit: contain; border-radius: 10px; margin-top: 0.6rem; }
+
+  .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 300; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; padding: 1rem; }
+  .lightbox img { max-width: 100%; max-height: 75vh; border-radius: 8px; }
+  .lightbox .lb-close { color: #fff; font-size: 1rem; padding: 0.6rem 1.2rem; background: rgba(255,255,255,0.15); border-radius: 999px; }
+
+  .setup-step { margin-bottom: 1.3rem; }
+  .setup-member-row { display: flex; gap: 0.6rem; margin-bottom: 0.6rem; align-items: center; }
+  .setup-member-row input { flex: 1; }
+  .pin-input { max-width: 110px !important; letter-spacing: 0.3em; text-align: center; }
+</style>
+</head>
+<body>
+
+<!-- ===== LOADING ===== -->
+<div id="screen-loading" class="auth-screen">
+  <div class="spinner"></div>
+</div>
+
+<!-- ===== SETUP (first run only) ===== -->
+<section id="screen-setup" class="auth-screen hidden">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="icon">🏗️</div>
+      <h1 class="brand">הקמה ראשונית</h1>
+      <p>נעשה את זה פעם אחת בלבד — הגדירו את בני המשפחה ואת שתי הדירות</p>
+    </div>
+    <div class="auth-card">
+      <div class="setup-step">
+        <label style="font-size:0.85rem;color:var(--muted);font-weight:500;">בני המשפחה (שם + קוד בן 4 ספרות לכל אחד)</label>
+        <div id="setupMembers" style="margin-top:0.6rem;"></div>
+      </div>
+      <div class="setup-step">
+        <label style="font-size:0.85rem;color:var(--muted);font-weight:500;">שמות הדירות</label>
+        <div class="field" style="margin-top:0.6rem;">
+          <input type="text" id="setupApt1" placeholder="לדוגמה: הדירה שלי">
+        </div>
+        <div class="field">
+          <input type="text" id="setupApt2" placeholder="לדוגמה: דירת ההורים">
+        </div>
+      </div>
+      <button class="btn btn-gold btn-block" id="btnSetupSubmit">סיימו הקמה והתחברו</button>
+      <p id="setupError" class="hidden" style="color:var(--danger);font-size:0.85rem;margin-top:0.8rem;text-align:center;"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== LOGIN: pick name ===== -->
+<section id="screen-login-name" class="auth-screen hidden">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="icon">🏠</div>
+      <h1 class="brand">ניהול השיפוץ</h1>
+      <p>מי מתחבר?</p>
+    </div>
+    <div class="auth-card">
+      <div class="name-grid" id="nameGrid"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== LOGIN: enter pin ===== -->
+<section id="screen-login-pin" class="auth-screen hidden">
+  <div class="auth-box">
+    <div class="auth-card">
+      <button class="back-link" id="btnBackToNames">→ חזרה</button>
+      <div style="text-align:center;margin-bottom:0.5rem;">
+        <div class="icon" style="font-size:1.8rem;">🔐</div>
+        <h2 style="font-family:'Playfair Display',serif;font-size:1.2rem;margin-top:0.4rem;" id="pinGreeting"></h2>
+        <p style="color:var(--muted);font-size:0.85rem;margin-top:0.2rem;">הזינו את 4 הספרות האחרונות של ת"ז</p>
+      </div>
+      <div class="pin-dots" id="pinDots">
+        <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+      </div>
+      <div class="pin-pad" id="pinPad"></div>
+      <p id="loginError" class="hidden" style="color:var(--danger);font-size:0.85rem;margin-top:1rem;text-align:center;"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== APP SHELL ===== -->
+<div id="app-shell" class="hidden">
+  <div class="top-bar">
+    <div class="top-row">
+      <div class="top-greeting">שלום, <b id="greetName"></b></div>
+      <button class="logout-btn" id="btnLogout">יציאה</button>
+    </div>
+    <div class="apt-switch" id="aptSwitch"></div>
+  </div>
+
+  <main>
+    <section id="view-overview" class="view"></section>
+    <section id="view-costs" class="view hidden"></section>
+    <section id="view-tasks" class="view hidden"></section>
+    <section id="view-documents" class="view hidden"></section>
+  </main>
+
+  <button class="fab hidden" id="fabAdd">+</button>
+
+  <nav class="tabbar">
+    <button class="tab-item active" data-view="overview"><span class="ic">🏠</span>סקירה</button>
+    <button class="tab-item" data-view="costs"><span class="ic">💰</span>עלויות</button>
+    <button class="tab-item" data-view="tasks"><span class="ic">📋</span>משימות</button>
+    <button class="tab-item" data-view="documents"><span class="ic">📎</span>מסמכים</button>
+  </nav>
+</div>
+
+<div id="toast" class="toast"></div>
+<div id="modalRoot"></div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+// ===================== CONFIG =====================
+const SUPABASE_URL = 'https://bjicskzwuiojhqdwfyov.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqaWNza3p3dWlvamhxZHdmeW92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5NTM1MDAsImV4cCI6MjEwMDUyOTUwMH0.OjtOKPxSPGdI44_6AeYA5CB7KbjF7W6BuieeKws6wsQ';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const CATEGORIES = [
+  { id: 'kitchen',         label: 'מטבח',           icon: '🍽️' },
+  { id: 'doors',           label: 'דלתות',          icon: '🚪' },
+  { id: 'marble_ceramic',  label: 'שיש/קרמיקה',     icon: '🧱' },
+  { id: 'electrical',      label: 'חשמל',           icon: '💡' },
+  { id: 'plumbing',        label: 'אינסטלציה',      icon: '🚰' },
+  { id: 'ac',              label: 'מיזוג אוויר',    icon: '❄️' },
+  { id: 'garden_exterior', label: 'גינה וחוץ',      icon: '🌿' },
+  { id: 'general',         label: 'כללי',           icon: '📌' },
+];
+const catLabel = id => CATEGORIES.find(c => c.id === id)?.label || id;
+const catIcon = id => CATEGORIES.find(c => c.id === id)?.icon || '📌';
+
+const TASK_STATUSES = [
+  { id: 'idea',   label: 'לבדוק' },
+  { id: 'agreed', label: 'סוכם עם הקבלן' },
+  { id: 'done',   label: 'בוצע' },
+];
+const EXPENSE_STATUSES = [
+  { id: 'pending', label: 'ממתין לתשלום' },
+  { id: 'paid',    label: 'שולם' },
+];
+
+// ===================== STATE =====================
+let state = {
+  member: null,        // { id, name }
+  apartments: [],
+  currentApartmentId: null,
+  currentView: 'overview',
+  expenses: [],
+  tasks: [],
+  documents: [],
+  realtimeChannel: null,
+};
+
+const $ = sel => document.querySelector(sel);
+const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+
+function showScreen(id) {
+  ['screen-loading','screen-setup','screen-login-name','screen-login-pin','app-shell'].forEach(s => {
+    $('#' + s).classList.toggle('hidden', s !== id);
+  });
+}
+
+function toast(msg, isError = false) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.toggle('error', isError);
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// ===================== BOOTSTRAP / AUTH =====================
+async function bootstrap() {
+  showScreen('screen-loading');
+
+  let { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    const { error } = await supabase.auth.signInAnonymously();
+    if (error) { toast('שגיאת חיבור: ' + error.message, true); return; }
+  }
+
+  const { data: setupDone, error: setupErr } = await supabase.rpc('is_setup_done');
+  if (setupErr) { toast('שגיאת חיבור לשרת', true); console.error(setupErr); return; }
+
+  if (!setupDone) {
+    renderSetupScreen();
+    showScreen('screen-setup');
+    return;
+  }
+
+  // try to resume existing session
+  const cached = JSON.parse(localStorage.getItem('dira_member') || 'null');
+  const { data: sessRow } = await supabase.from('sessions').select('member_id, expires_at').maybeSingle();
+
+  if (sessRow && new Date(sessRow.expires_at) > new Date() && cached && cached.id === sessRow.member_id) {
+    state.member = cached;
+    await supabase.rpc('touch_session');
+    await enterApp();
+    return;
+  }
+
+  localStorage.removeItem('dira_member');
+  await renderLoginNameScreen();
+  showScreen('screen-login-name');
+}
+
+// ---- setup screen ----
+function renderSetupScreen() {
+  const wrap = $('#setupMembers');
+  wrap.innerHTML = '';
+  const defaults = ['אני', 'אמא', 'אבא'];
+  defaults.forEach((name, i) => {
+    const row = el('div', 'setup-member-row');
+    row.innerHTML = `
+      <input type="text" placeholder="שם" value="${i === 0 ? '' : name}" class="setup-name">
+      <input type="tel" inputmode="numeric" maxlength="4" placeholder="4 ספרות" class="pin-input setup-pin">
+    `;
+    wrap.appendChild(row);
+  });
+  $('#setupApt1').value = 'הדירה שלי';
+  $('#setupApt2').value = 'דירת ההורים';
+}
+
+$('#btnSetupSubmit').addEventListener('click', async () => {
+  const errEl = $('#setupError');
+  errEl.classList.add('hidden');
+  const rows = [...document.querySelectorAll('.setup-member-row')];
+  const members = rows.map((r, i) => ({
+    full_name: r.querySelector('.setup-name').value.trim(),
+    pin: r.querySelector('.setup-pin').value.trim(),
+    sort_order: i,
+  }));
+  const apt1 = $('#setupApt1').value.trim();
+  const apt2 = $('#setupApt2').value.trim();
+
+  for (const m of members) {
+    if (!m.full_name) { showSetupError('נא למלא שם לכל בני המשפחה'); return; }
+    if (!/^\d{4}$/.test(m.pin)) { showSetupError(`נא להזין קוד בן 4 ספרות עבור ${m.full_name}`); return; }
+  }
+  if (!apt1 || !apt2) { showSetupError('נא למלא שמות לשתי הדירות'); return; }
+
+  const btn = $('#btnSetupSubmit');
+  btn.disabled = true; btn.textContent = 'מקים...';
+
+  const { error } = await supabase.rpc('bootstrap_setup', {
+    p_members: members,
+    p_apartments: [
+      { slug: 'apt1', display_name: apt1 },
+      { slug: 'apt2', display_name: apt2 },
+    ],
+  });
+
+  btn.disabled = false; btn.textContent = 'סיימו הקמה והתחברו';
+
+  if (error) { showSetupError(error.message || 'שגיאה בהקמה'); return; }
+  toast('ההקמה הושלמה!');
+  await renderLoginNameScreen();
+  showScreen('screen-login-name');
+});
+
+function showSetupError(msg) {
+  const e = $('#setupError');
+  e.textContent = msg;
+  e.classList.remove('hidden');
+}
+
+// ---- login: name picker ----
+let selectedLoginName = null;
+
+async function renderLoginNameScreen() {
+  const { data, error } = await supabase.rpc('list_member_names');
+  const grid = $('#nameGrid');
+  grid.innerHTML = '';
+  if (error || !data) { toast('שגיאה בטעינת רשימת המשתמשים', true); return; }
+  data.forEach(m => {
+    const btn = el('button', 'name-btn', `<span class="av">${m.full_name.trim()[0] || '?'}</span><span>${m.full_name}</span>`);
+    btn.addEventListener('click', () => openPinScreen(m.full_name));
+    grid.appendChild(btn);
+  });
+}
+
+function openPinScreen(name) {
+  selectedLoginName = name;
+  currentPin = '';
+  $('#pinGreeting').textContent = `שלום ${name}`;
+  updatePinDots();
+  renderPinPad();
+  $('#loginError').classList.add('hidden');
+  showScreen('screen-login-pin');
+}
+
+$('#btnBackToNames').addEventListener('click', () => showScreen('screen-login-name'));
+
+let currentPin = '';
+function updatePinDots() {
+  document.querySelectorAll('#pinDots .pin-dot').forEach((d, i) => d.classList.toggle('filled', i < currentPin.length));
+}
+function renderPinPad() {
+  const pad = $('#pinPad');
+  pad.innerHTML = '';
+  const keys = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
+  keys.forEach(k => {
+    const key = el('button', 'pin-key' + (k === '⌫' ? ' wide' : ''), k);
+    if (k === '') { key.style.visibility = 'hidden'; }
+    else {
+      key.addEventListener('click', () => onPinKey(k));
+    }
+    pad.appendChild(key);
+  });
+}
+async function onPinKey(k) {
+  if (k === '⌫') { currentPin = currentPin.slice(0, -1); updatePinDots(); return; }
+  if (currentPin.length >= 4) return;
+  currentPin += k;
+  updatePinDots();
+  if (currentPin.length === 4) await submitLogin();
+}
+async function submitLogin() {
+  const { data, error } = await supabase.rpc('login_with_pin', { p_full_name: selectedLoginName, p_id_last4: currentPin });
+  if (error) {
+    $('#loginError').textContent = error.message || 'שגיאה';
+    $('#loginError').classList.remove('hidden');
+    currentPin = '';
+    updatePinDots();
+    return;
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  state.member = { id: row.member_id, name: row.display_name };
+  localStorage.setItem('dira_member', JSON.stringify(state.member));
+  await enterApp();
+}
+
+$('#btnLogout').addEventListener('click', async () => {
+  await supabase.rpc('logout');
+  localStorage.removeItem('dira_member');
+  if (state.realtimeChannel) { supabase.removeChannel(state.realtimeChannel); state.realtimeChannel = null; }
+  location.reload();
+});
+
+// ===================== APP =====================
+async function enterApp() {
+  $('#greetName').textContent = state.member.name;
+
+  const { data: apts, error } = await supabase.from('apartments').select('id, slug, display_name').order('slug');
+  if (error || !apts || apts.length === 0) { toast('שגיאה בטעינת הדירות', true); return; }
+  state.apartments = apts;
+  state.currentApartmentId = apts[0].id;
+
+  renderApartmentSwitch();
+  setupTabbar();
+  setupRealtime();
+  await loadAllData();
+  renderCurrentView();
+
+  showScreen('app-shell');
+}
+
+function renderApartmentSwitch() {
+  const wrap = $('#aptSwitch');
+  wrap.innerHTML = '';
+  state.apartments.forEach(a => {
+    const tab = el('button', 'apt-tab' + (a.id === state.currentApartmentId ? ' active' : ''), a.display_name);
+    tab.addEventListener('click', async () => {
+      state.currentApartmentId = a.id;
+      renderApartmentSwitch();
+      await loadAllData();
+      renderCurrentView();
+    });
+    wrap.appendChild(tab);
+  });
+}
+
+function setupTabbar() {
+  document.querySelectorAll('.tab-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.currentView = btn.dataset.view;
+      document.querySelectorAll('.tab-item').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('main .view').forEach(v => v.classList.add('hidden'));
+      $('#view-' + state.currentView).classList.remove('hidden');
+      renderCurrentView();
+    });
+  });
+}
+
+function setupRealtime() {
+  if (state.realtimeChannel) supabase.removeChannel(state.realtimeChannel);
+  state.realtimeChannel = supabase
+    .channel('dira-updates')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => refreshCurrentApartmentData())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => refreshCurrentApartmentData())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'documents' }, () => refreshCurrentApartmentData())
+    .subscribe();
+}
+
+let refreshTimer = null;
+function refreshCurrentApartmentData() {
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(async () => { await loadAllData(); renderCurrentView(); }, 350);
+}
+
+async function loadAllData() {
+  const aptId = state.currentApartmentId;
+  const [expRes, taskRes, docRes] = await Promise.all([
+    supabase.from('expenses').select('*').eq('apartment_id', aptId).eq('is_deleted', false).order('expense_date', { ascending: false }),
+    supabase.from('tasks').select('*').eq('apartment_id', aptId).order('created_at', { ascending: false }),
+    supabase.from('documents').select('*').eq('apartment_id', aptId).order('created_at', { ascending: false }),
+  ]);
+  state.expenses = expRes.data || [];
+  state.tasks = taskRes.data || [];
+  state.documents = docRes.data || [];
+}
+
+function renderCurrentView() {
+  const fab = $('#fabAdd');
+  if (state.currentView === 'overview') { renderOverview(); fab.classList.add('hidden'); }
+  if (state.currentView === 'costs') { renderCosts(); fab.classList.remove('hidden'); fab.onclick = () => openExpenseModal(); }
+  if (state.currentView === 'tasks') { renderTasks(); fab.classList.remove('hidden'); fab.onclick = () => openTaskModal(); }
+  if (state.currentView === 'documents') { renderDocuments(); fab.classList.remove('hidden'); fab.onclick = () => openDocumentModal(); }
+}
+
+// ===================== OVERVIEW =====================
+function renderOverview() {
+  const v = $('#view-overview');
+  const totalPaid = state.expenses.filter(e => e.status === 'paid').reduce((s, e) => s + Number(e.amount), 0);
+  const totalPending = state.expenses.filter(e => e.status === 'pending').reduce((s, e) => s + Number(e.amount), 0);
+  const openTasks = state.tasks.filter(t => t.status !== 'done').length;
+  const doneTasks = state.tasks.filter(t => t.status === 'done').length;
+
+  v.innerHTML = `
+    <h2 class="view-title">סקירה כללית</h2>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="n">${fmtMoney(totalPaid)}</div><div class="l">שולם עד כה</div></div>
+      <div class="stat-card"><div class="n">${fmtMoney(totalPending)}</div><div class="l">ממתין לתשלום</div></div>
+      <div class="stat-card"><div class="n">${openTasks}</div><div class="l">משימות פתוחות</div></div>
+      <div class="stat-card"><div class="n">${doneTasks}</div><div class="l">משימות שהושלמו</div></div>
+      <div class="stat-card wide"><span>סה"כ עלות רשומה</span><span class="item-amount">${fmtMoney(totalPaid + totalPending)}</span></div>
+      <div class="stat-card wide"><span>קבצים ותמונות</span><span class="item-amount">${state.documents.length}</span></div>
+    </div>
+  `;
+}
+
+function fmtMoney(n) { return '₪' + Number(n).toLocaleString('he-IL', { maximumFractionDigits: 0 }); }
+function fmtDate(d) { return new Date(d).toLocaleDateString('he-IL'); }
+
+// ===================== COSTS =====================
+let costFilter = 'all';
+function renderCosts() {
+  const v = $('#view-costs');
+  const filters = [{ id: 'all', label: 'הכל' }, ...EXPENSE_STATUSES];
+  const list = state.expenses.filter(e => costFilter === 'all' || e.status === costFilter);
+
+  v.innerHTML = `
+    <h2 class="view-title">עלויות</h2>
+    <div class="filter-row" id="costFilterRow"></div>
+    <div class="list" id="costList"></div>
+  `;
+  const row = $('#costFilterRow');
+  filters.forEach(f => {
+    const chip = el('button', 'filter-chip' + (costFilter === f.id ? ' active' : ''), f.label);
+    chip.addEventListener('click', () => { costFilter = f.id; renderCosts(); });
+    row.appendChild(chip);
+  });
+
+  const listEl = $('#costList');
+  if (list.length === 0) {
+    listEl.innerHTML = `<div class="empty-state"><div class="em">💰</div>אין עדיין עלויות רשומות</div>`;
+    return;
+  }
+  list.forEach(e => {
+    const card = el('div', 'item-card');
+    card.innerHTML = `
+      <div class="item-top">
+        <div>
+          <div class="item-title">${catIcon(e.category)} ${escapeHtml(e.description)}</div>
+          <div class="item-desc">${fmtDate(e.expense_date)}${e.notes ? ' · ' + escapeHtml(e.notes) : ''}</div>
+        </div>
+        <div class="item-amount">${fmtMoney(e.amount)}</div>
+      </div>
+      <div class="item-meta">
+        <span class="tag">${catLabel(e.category)}</span>
+        <span class="tag status-${e.status}">${EXPENSE_STATUSES.find(s => s.id === e.status).label}</span>
+      </div>
+      <div class="item-actions" style="margin-top:0.7rem;">
+        <button class="icon-btn btn-edit">✏️</button>
+        <button class="icon-btn btn-del">🗑️</button>
+      </div>
+    `;
+    card.querySelector('.btn-edit').addEventListener('click', () => openExpenseModal(e));
+    card.querySelector('.btn-del').addEventListener('click', () => deleteExpense(e.id));
+    listEl.appendChild(card);
+  });
+}
+
+async function deleteExpense(id) {
+  if (!confirm('למחוק את הרשומה?')) return;
+  const { error } = await supabase.from('expenses').update({ is_deleted: true }).eq('id', id);
+  if (error) { toast('שגיאה במחיקה', true); return; }
+  await loadAllData(); renderCurrentView(); toast('נמחק');
+}
+
+function openExpenseModal(existing) {
+  const isEdit = !!existing;
+  const modal = openModal(`
+    <div class="modal-title">${isEdit ? 'עריכת עלות' : 'עלות חדשה'}</div>
+    <div class="cat-picker" id="mCatPicker"></div>
+    <div class="field"><label>תיאור</label><input type="text" id="mDesc" value="${isEdit ? escapeHtml(existing.description) : ''}"></div>
+    <div class="field-row">
+      <div class="field"><label>סכום (₪)</label><input type="number" id="mAmount" value="${isEdit ? existing.amount : ''}" min="0" step="1"></div>
+      <div class="field"><label>תאריך</label><input type="date" id="mDate" value="${isEdit ? existing.expense_date : new Date().toISOString().slice(0,10)}"></div>
+    </div>
+    <div class="status-picker" id="mStatusPicker"></div>
+    <div class="field"><label>הערות (אופציונלי)</label><textarea id="mNotes" rows="2">${isEdit ? escapeHtml(existing.notes || '') : ''}</textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-block" id="mCancel">ביטול</button>
+      <button class="btn btn-gold btn-block" id="mSave">שמירה</button>
+    </div>
+  `);
+
+  let selCat = existing?.category || 'general';
+  let selStatus = existing?.status || 'pending';
+  renderCatPicker($('#mCatPicker'), selCat, c => selCat = c);
+  renderStatusPicker($('#mStatusPicker'), EXPENSE_STATUSES, selStatus, s => selStatus = s);
+
+  $('#mCancel').addEventListener('click', closeModal);
+  $('#mSave').addEventListener('click', async () => {
+    const desc = $('#mDesc').value.trim();
+    const amount = parseFloat($('#mAmount').value);
+    const date = $('#mDate').value;
+    const notes = $('#mNotes').value.trim();
+    if (!desc || isNaN(amount) || amount < 0 || !date) { toast('נא למלא תיאור, סכום ותאריך תקינים', true); return; }
+
+    const payload = {
+      apartment_id: state.currentApartmentId,
+      category: selCat, description: desc, amount, status: selStatus,
+      expense_date: date, notes: notes || null,
+    };
+    let error;
+    if (isEdit) {
+      ({ error } = await supabase.from('expenses').update(payload).eq('id', existing.id));
+    } else {
+      payload.added_by_member_id = state.member.id;
+      ({ error } = await supabase.from('expenses').insert(payload));
+    }
+    if (error) { toast('שגיאה בשמירה', true); return; }
+    closeModal();
+    await loadAllData(); renderCurrentView(); toast('נשמר בהצלחה');
+  });
+}
+
+// ===================== TASKS =====================
+let taskFilter = 'all';
+function renderTasks() {
+  const v = $('#view-tasks');
+  const filters = [{ id: 'all', label: 'הכל' }, ...TASK_STATUSES];
+  v.innerHTML = `
+    <h2 class="view-title">משימות ובקשות לקבלן</h2>
+    <div class="filter-row" id="taskFilterRow"></div>
+    <div id="taskGroups"></div>
+  `;
+  const row = $('#taskFilterRow');
+  filters.forEach(f => {
+    const chip = el('button', 'filter-chip' + (taskFilter === f.id ? ' active' : ''), f.label);
+    chip.addEventListener('click', () => { taskFilter = f.id; renderTasks(); });
+    row.appendChild(chip);
+  });
+
+  const filtered = state.tasks.filter(t => taskFilter === 'all' || t.status === taskFilter);
+  const groupsWrap = $('#taskGroups');
+  if (filtered.length === 0) {
+    groupsWrap.innerHTML = `<div class="empty-state"><div class="em">📋</div>אין משימות כאן</div>`;
+    return;
+  }
+  CATEGORIES.forEach(cat => {
+    const items = filtered.filter(t => t.category === cat.id);
+    if (items.length === 0) return;
+    const group = el('div', 'cat-group');
+    group.innerHTML = `<h3>${cat.icon} ${cat.label}</h3>`;
+    const list = el('div', 'list');
+    items.forEach(t => {
+      const card = el('div', 'item-card');
+      card.innerHTML = `
+        <div class="item-top">
+          <div>
+            <div class="item-title">${escapeHtml(t.title)}</div>
+            ${t.description ? `<div class="item-desc">${escapeHtml(t.description)}</div>` : ''}
+          </div>
+        </div>
+        <div class="item-meta">
+          <span class="tag status-${t.status}">${TASK_STATUSES.find(s => s.id === t.status).label}</span>
+        </div>
+        <div class="item-actions" style="margin-top:0.7rem;">
+          <button class="icon-btn btn-edit">✏️</button>
+          <button class="icon-btn btn-del">🗑️</button>
+        </div>
+      `;
+      card.querySelector('.btn-edit').addEventListener('click', () => openTaskModal(t));
+      card.querySelector('.btn-del').addEventListener('click', () => deleteTask(t.id));
+      list.appendChild(card);
+    });
+    group.appendChild(list);
+    groupsWrap.appendChild(group);
+  });
+}
+
+async function deleteTask(id) {
+  if (!confirm('למחוק את המשימה?')) return;
+  const { error } = await supabase.from('tasks').delete().eq('id', id);
+  if (error) { toast('שגיאה במחיקה', true); return; }
+  await loadAllData(); renderCurrentView(); toast('נמחק');
+}
+
+function openTaskModal(existing) {
+  const isEdit = !!existing;
+  const modal = openModal(`
+    <div class="modal-title">${isEdit ? 'עריכת משימה' : 'משימה חדשה'}</div>
+    <div class="cat-picker" id="mCatPicker"></div>
+    <div class="field"><label>כותרת</label><input type="text" id="mTitle" value="${isEdit ? escapeHtml(existing.title) : ''}" placeholder="למשל: נקודת מים בגינה ליד המרפסת"></div>
+    <div class="field"><label>פירוט (אופציונלי)</label><textarea id="mTaskDesc" rows="3">${isEdit ? escapeHtml(existing.description || '') : ''}</textarea></div>
+    <div class="status-picker" id="mStatusPicker"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-block" id="mCancel">ביטול</button>
+      <button class="btn btn-gold btn-block" id="mSave">שמירה</button>
+    </div>
+  `);
+
+  let selCat = existing?.category || 'general';
+  let selStatus = existing?.status || 'idea';
+  renderCatPicker($('#mCatPicker'), selCat, c => selCat = c);
+  renderStatusPicker($('#mStatusPicker'), TASK_STATUSES, selStatus, s => selStatus = s);
+
+  $('#mCancel').addEventListener('click', closeModal);
+  $('#mSave').addEventListener('click', async () => {
+    const title = $('#mTitle').value.trim();
+    const description = $('#mTaskDesc').value.trim();
+    if (!title) { toast('נא למלא כותרת', true); return; }
+
+    const payload = {
+      apartment_id: state.currentApartmentId,
+      category: selCat, title, description: description || null, status: selStatus,
+      resolved_at: selStatus === 'done' ? new Date().toISOString() : null,
+    };
+    let error;
+    if (isEdit) {
+      ({ error } = await supabase.from('tasks').update(payload).eq('id', existing.id));
+    } else {
+      payload.added_by_member_id = state.member.id;
+      ({ error } = await supabase.from('tasks').insert(payload));
+    }
+    if (error) { toast('שגיאה בשמירה', true); return; }
+    closeModal();
+    await loadAllData(); renderCurrentView(); toast('נשמר בהצלחה');
+  });
+}
+
+// ===================== DOCUMENTS =====================
+function renderDocuments() {
+  const v = $('#view-documents');
+  v.innerHTML = `
+    <h2 class="view-title">מסמכים ותמונות</h2>
+    <div class="doc-grid" id="docGrid"></div>
+  `;
+  const grid = $('#docGrid');
+  if (state.documents.length === 0) {
+    grid.outerHTML = `<div class="empty-state"><div class="em">📎</div>אין עדיין קבצים</div>`;
+    return;
+  }
+  state.documents.forEach(d => {
+    const tile = el('div', 'doc-tile');
+    const isImage = (d.mime_type || '').startsWith('image/');
+    tile.innerHTML = isImage
+      ? `<img loading="lazy" data-path="${d.storage_path}"><div class="doc-label">${d.kind === 'receipt' ? '🧾' : '📄'} ${escapeHtml(d.title || d.file_name)}</div>`
+      : `<div class="file-icon">📄</div><div class="doc-label">${escapeHtml(d.title || d.file_name)}</div>`;
+    tile.addEventListener('click', () => openLightbox(d));
+    grid.appendChild(tile);
+    if (isImage) loadSignedThumb(tile.querySelector('img'), d.storage_path);
+  });
+}
+
+async function loadSignedThumb(imgEl, path) {
+  const { data } = await supabase.storage.from('attachments').createSignedUrl(path, 3600);
+  if (data?.signedUrl) imgEl.src = data.signedUrl;
+}
+
+async function openLightbox(doc) {
+  const { data, error } = await supabase.storage.from('attachments').createSignedUrl(doc.storage_path, 3600);
+  const box = el('div', 'lightbox');
+  const isImage = (doc.mime_type || '').startsWith('image/');
+  box.innerHTML = `
+    ${isImage && data ? `<img src="${data.signedUrl}">` : `<div style="color:#fff;">📄 ${escapeHtml(doc.file_name)}</div>`}
+    <div style="display:flex;gap:0.6rem;">
+      ${data ? `<a href="${data.signedUrl}" target="_blank" class="lb-close" style="text-decoration:none;">פתיחה / הורדה</a>` : ''}
+      <button class="lb-close btn-del-doc">מחיקה</button>
+      <button class="lb-close">סגירה</button>
+    </div>
+  `;
+  box.querySelectorAll('.lb-close')[box.querySelectorAll('.lb-close').length - 1].addEventListener('click', () => box.remove());
+  box.querySelector('.btn-del-doc').addEventListener('click', async () => {
+    if (!confirm('למחוק את הקובץ?')) return;
+    await supabase.storage.from('attachments').remove([doc.storage_path]);
+    await supabase.from('documents').delete().eq('id', doc.id);
+    box.remove();
+    await loadAllData(); renderCurrentView(); toast('נמחק');
+  });
+  document.body.appendChild(box);
+}
+
+function openDocumentModal() {
+  const modal = openModal(`
+    <div class="modal-title">העלאת קובץ</div>
+    <div class="status-picker" id="mKindPicker"></div>
+    <div class="field"><label>כותרת (אופציונלי)</label><input type="text" id="mDocTitle" placeholder="לדוגמה: קבלה מטבחים / שרטוט קומה"></div>
+    <div class="file-drop">
+      <input type="file" id="mFile" accept="image/*,application/pdf" style="width:100%;">
+    </div>
+    <img id="mPreview" class="preview-thumb hidden">
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-block" id="mCancel">ביטול</button>
+      <button class="btn btn-gold btn-block" id="mUpload">העלאה</button>
+    </div>
+  `);
+
+  let selKind = 'document';
+  renderStatusPicker($('#mKindPicker'), [{ id: 'receipt', label: '🧾 קבלה' }, { id: 'document', label: '📄 מסמך/שרטוט' }], selKind, k => selKind = k);
+
+  $('#mFile').addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (f && f.type.startsWith('image/')) {
+      $('#mPreview').src = URL.createObjectURL(f);
+      $('#mPreview').classList.remove('hidden');
+    } else {
+      $('#mPreview').classList.add('hidden');
+    }
+  });
+
+  $('#mCancel').addEventListener('click', closeModal);
+  $('#mUpload').addEventListener('click', async () => {
+    const file = $('#mFile').files[0];
+    if (!file) { toast('נא לבחור קובץ', true); return; }
+    const title = $('#mDocTitle').value.trim();
+    const btn = $('#mUpload');
+    btn.disabled = true; btn.textContent = 'מעלה...';
+
+    const path = `${state.currentApartmentId}/${selKind}/${crypto.randomUUID()}-${file.name}`;
+    const { error: upErr } = await supabase.storage.from('attachments').upload(path, file);
+    if (upErr) { toast('שגיאה בהעלאה', true); btn.disabled = false; btn.textContent = 'העלאה'; return; }
+
+    const { error: dbErr } = await supabase.from('documents').insert({
+      apartment_id: state.currentApartmentId,
+      kind: selKind,
+      title: title || null,
+      storage_path: path,
+      file_name: file.name,
+      mime_type: file.type,
+      size_bytes: file.size,
+      uploaded_by_member_id: state.member.id,
+    });
+    if (dbErr) { toast('שגיאה בשמירת הקובץ', true); btn.disabled = false; btn.textContent = 'העלאה'; return; }
+
+    closeModal();
+    await loadAllData(); renderCurrentView(); toast('הועלה בהצלחה');
+  });
+}
+
+// ===================== SHARED UI HELPERS =====================
+function renderCatPicker(container, selected, onPick) {
+  container.innerHTML = '';
+  CATEGORIES.forEach(c => {
+    const item = el('div', 'cat-pick-item' + (c.id === selected ? ' active' : ''), `<span class="ic">${c.icon}</span>${c.label}`);
+    item.addEventListener('click', () => {
+      selected = c.id;
+      container.querySelectorAll('.cat-pick-item').forEach(x => x.classList.remove('active'));
+      item.classList.add('active');
+      onPick(c.id);
+    });
+    container.appendChild(item);
+  });
+}
+function renderStatusPicker(container, options, selected, onPick) {
+  container.innerHTML = '';
+  options.forEach(o => {
+    const item = el('div', 'status-pick-item' + (o.id === selected ? ' active' : ''), o.label);
+    item.addEventListener('click', () => {
+      container.querySelectorAll('.status-pick-item').forEach(x => x.classList.remove('active'));
+      item.classList.add('active');
+      onPick(o.id);
+    });
+    container.appendChild(item);
+  });
+}
+function openModal(innerHtml) {
+  const overlay = el('div', 'modal-overlay');
+  overlay.innerHTML = `<div class="modal-sheet"><div class="modal-handle"></div>${innerHtml}</div>`;
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+  $('#modalRoot').appendChild(overlay);
+  return overlay;
+}
+function closeModal() { $('#modalRoot').innerHTML = ''; }
+function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ===================== GO =====================
+bootstrap();
+</script>
+</body>
+</html>
