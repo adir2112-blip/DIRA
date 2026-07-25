@@ -498,3 +498,300 @@ $$;
 
 revoke all on function public.list_members_with_ids() from public;
 grant execute on function public.list_members_with_ids() to anon, authenticated;
+
+-- DIRA-CHANGE migration 004: per-member apartment access control
+-- Project: dira-change (ref bjicskzwuiojhqdwfyov) only.
+--
+-- Until now, any logged-in family member could see every apartment. This
+-- introduces member_apartment_access so newly-added families are isolated
+-- to only their own apartment, while the two existing members keep seeing
+-- both of their current apartments (backfilled below).
+
+create table if not exists member_apartment_access (
+  member_id    uuid not null references members(id),
+  apartment_id uuid not null references apartments(id),
+  primary key (member_id, apartment_id)
+);
+alter table member_apartment_access enable row level security;
+
+drop policy if exists "member can read own access rows" on member_apartment_access;
+create policy "member can read own access rows" on member_apartment_access for select to authenticated
+  using (member_id = (select member_id from sessions where auth_uid = (select auth.uid()) and expires_at > now()));
+revoke insert, update, delete on member_apartment_access from anon, authenticated;
+
+-- backfill: preserve current behavior for the two existing members/apartments
+insert into member_apartment_access (member_id, apartment_id)
+select m.id, a.id from members m cross join apartments a
+on conflict do nothing;
+
+-- ===== helper predicate used everywhere below =====
+-- exists (
+--   select 1 from sessions s
+--   join member_apartment_access maa on maa.member_id = s.member_id
+--   where s.auth_uid = (select auth.uid()) and s.expires_at > now()
+--     and maa.apartment_id = <table>.apartment_id  -- or apartments.id for the apartments table itself
+-- )
+
+-- ===== apartments =====
+drop policy if exists "family can read apartments" on apartments;
+create policy "family can read apartments" on apartments for select to authenticated
+  using (exists (
+    select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = apartments.id
+  ));
+
+-- ===== expenses =====
+drop policy if exists "family can read expenses" on expenses;
+drop policy if exists "family can write expenses" on expenses;
+drop policy if exists "family can update expenses" on expenses;
+drop policy if exists "family can delete expenses" on expenses;
+create policy "family can read expenses" on expenses for select to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = expenses.apartment_id));
+create policy "family can write expenses" on expenses for insert to authenticated
+  with check (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = expenses.apartment_id));
+create policy "family can update expenses" on expenses for update to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = expenses.apartment_id))
+  with check (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = expenses.apartment_id));
+create policy "family can delete expenses" on expenses for delete to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = expenses.apartment_id));
+
+-- ===== tasks =====
+drop policy if exists "family can read tasks" on tasks;
+drop policy if exists "family can write tasks" on tasks;
+drop policy if exists "family can update tasks" on tasks;
+drop policy if exists "family can delete tasks" on tasks;
+create policy "family can read tasks" on tasks for select to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = tasks.apartment_id));
+create policy "family can write tasks" on tasks for insert to authenticated
+  with check (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = tasks.apartment_id));
+create policy "family can update tasks" on tasks for update to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = tasks.apartment_id))
+  with check (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = tasks.apartment_id));
+create policy "family can delete tasks" on tasks for delete to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = tasks.apartment_id));
+
+-- ===== documents =====
+drop policy if exists "family can read documents" on documents;
+drop policy if exists "family can write documents" on documents;
+drop policy if exists "family can update documents" on documents;
+drop policy if exists "family can delete documents" on documents;
+create policy "family can read documents" on documents for select to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = documents.apartment_id));
+create policy "family can write documents" on documents for insert to authenticated
+  with check (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = documents.apartment_id));
+create policy "family can update documents" on documents for update to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = documents.apartment_id))
+  with check (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = documents.apartment_id));
+create policy "family can delete documents" on documents for delete to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = documents.apartment_id));
+
+-- ===== contacts =====
+drop policy if exists "family can read contacts" on contacts;
+drop policy if exists "family can write contacts" on contacts;
+drop policy if exists "family can update contacts" on contacts;
+drop policy if exists "family can delete contacts" on contacts;
+create policy "family can read contacts" on contacts for select to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = contacts.apartment_id));
+create policy "family can write contacts" on contacts for insert to authenticated
+  with check (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = contacts.apartment_id));
+create policy "family can update contacts" on contacts for update to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = contacts.apartment_id))
+  with check (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = contacts.apartment_id));
+create policy "family can delete contacts" on contacts for delete to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = contacts.apartment_id));
+
+-- ===== furniture_items =====
+drop policy if exists "family can read furniture" on furniture_items;
+drop policy if exists "family can write furniture" on furniture_items;
+drop policy if exists "family can update furniture" on furniture_items;
+drop policy if exists "family can delete furniture" on furniture_items;
+create policy "family can read furniture" on furniture_items for select to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = furniture_items.apartment_id));
+create policy "family can write furniture" on furniture_items for insert to authenticated
+  with check (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = furniture_items.apartment_id));
+create policy "family can update furniture" on furniture_items for update to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = furniture_items.apartment_id))
+  with check (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = furniture_items.apartment_id));
+create policy "family can delete furniture" on furniture_items for delete to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = furniture_items.apartment_id));
+
+-- ===== category_deadlines =====
+drop policy if exists "family can read deadlines" on category_deadlines;
+drop policy if exists "family can write deadlines" on category_deadlines;
+drop policy if exists "family can update deadlines" on category_deadlines;
+drop policy if exists "family can delete deadlines" on category_deadlines;
+create policy "family can read deadlines" on category_deadlines for select to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = category_deadlines.apartment_id));
+create policy "family can write deadlines" on category_deadlines for insert to authenticated
+  with check (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = category_deadlines.apartment_id));
+create policy "family can update deadlines" on category_deadlines for update to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = category_deadlines.apartment_id))
+  with check (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = category_deadlines.apartment_id));
+create policy "family can delete deadlines" on category_deadlines for delete to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = category_deadlines.apartment_id));
+
+-- ===== floor_plans =====
+drop policy if exists "family can read floor_plans" on floor_plans;
+drop policy if exists "family can write floor_plans" on floor_plans;
+drop policy if exists "family can update floor_plans" on floor_plans;
+drop policy if exists "family can delete floor_plans" on floor_plans;
+create policy "family can read floor_plans" on floor_plans for select to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = floor_plans.apartment_id));
+create policy "family can write floor_plans" on floor_plans for insert to authenticated
+  with check (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = floor_plans.apartment_id));
+create policy "family can update floor_plans" on floor_plans for update to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = floor_plans.apartment_id))
+  with check (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = floor_plans.apartment_id));
+create policy "family can delete floor_plans" on floor_plans for delete to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = floor_plans.apartment_id));
+
+-- ===== plan_pins =====
+drop policy if exists "family can read plan_pins" on plan_pins;
+drop policy if exists "family can write plan_pins" on plan_pins;
+drop policy if exists "family can update plan_pins" on plan_pins;
+drop policy if exists "family can delete plan_pins" on plan_pins;
+create policy "family can read plan_pins" on plan_pins for select to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = plan_pins.apartment_id));
+create policy "family can write plan_pins" on plan_pins for insert to authenticated
+  with check (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = plan_pins.apartment_id));
+create policy "family can update plan_pins" on plan_pins for update to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = plan_pins.apartment_id))
+  with check (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = plan_pins.apartment_id));
+create policy "family can delete plan_pins" on plan_pins for delete to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = plan_pins.apartment_id));
+
+-- ===== quotes =====
+drop policy if exists "family can read quotes" on quotes;
+drop policy if exists "family can write quotes" on quotes;
+drop policy if exists "family can update quotes" on quotes;
+drop policy if exists "family can delete quotes" on quotes;
+create policy "family can read quotes" on quotes for select to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = quotes.apartment_id));
+create policy "family can write quotes" on quotes for insert to authenticated
+  with check (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = quotes.apartment_id));
+create policy "family can update quotes" on quotes for update to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = quotes.apartment_id))
+  with check (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = quotes.apartment_id));
+create policy "family can delete quotes" on quotes for delete to authenticated
+  using (exists (select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now() and maa.apartment_id = quotes.apartment_id));
+
+-- ===== storage.objects (attachments bucket; apartment_id is the first path segment) =====
+drop policy if exists "family can read attachments" on storage.objects;
+drop policy if exists "family can upload attachments" on storage.objects;
+drop policy if exists "family can update attachments" on storage.objects;
+drop policy if exists "family can delete attachments" on storage.objects;
+create policy "family can read attachments" on storage.objects for select to authenticated
+  using (bucket_id = 'attachments' and exists (
+    select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now()
+      and maa.apartment_id = (split_part(name, '/', 1))::uuid
+  ));
+create policy "family can upload attachments" on storage.objects for insert to authenticated
+  with check (bucket_id = 'attachments' and exists (
+    select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now()
+      and maa.apartment_id = (split_part(name, '/', 1))::uuid
+  ));
+create policy "family can update attachments" on storage.objects for update to authenticated
+  using (bucket_id = 'attachments' and exists (
+    select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now()
+      and maa.apartment_id = (split_part(name, '/', 1))::uuid
+  ));
+create policy "family can delete attachments" on storage.objects for delete to authenticated
+  using (bucket_id = 'attachments' and exists (
+    select 1 from sessions s join member_apartment_access maa on maa.member_id = s.member_id
+    where s.auth_uid = (select auth.uid()) and s.expires_at > now()
+      and maa.apartment_id = (split_part(name, '/', 1))::uuid
+  ));
+
+-- ===== RPC: add a new isolated family (new apartment + new member(s), access to only that apartment) =====
+create or replace function public.add_family(p_apartment_name text, p_members jsonb)
+returns table(apartment_id uuid)
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_caller_member_id uuid;
+  v_new_apartment_id uuid;
+  m jsonb;
+  v_new_member_id uuid;
+begin
+  select member_id into v_caller_member_id from sessions where auth_uid = auth.uid() and expires_at > now();
+  if v_caller_member_id is null then
+    raise exception 'לא מחובר' using errcode = 'P0001';
+  end if;
+
+  if p_apartment_name is null or length(trim(p_apartment_name)) = 0 then
+    raise exception 'נא למלא שם דירה' using errcode = 'P0001';
+  end if;
+  if jsonb_array_length(p_members) = 0 then
+    raise exception 'נא להוסיף לפחות בן משפחה אחד' using errcode = 'P0001';
+  end if;
+
+  insert into apartments (slug, display_name)
+  values ('fam-' || substr(gen_random_uuid()::text, 1, 8), p_apartment_name)
+  returning id into v_new_apartment_id;
+
+  for m in select * from jsonb_array_elements(p_members)
+  loop
+    insert into members (full_name, id_last4_hash, sort_order)
+    values (m->>'full_name', crypt(m->>'pin', gen_salt('bf')), coalesce((select max(sort_order) from members), 0) + 1)
+    returning id into v_new_member_id;
+
+    insert into member_apartment_access (member_id, apartment_id)
+    values (v_new_member_id, v_new_apartment_id);
+  end loop;
+
+  return query select v_new_apartment_id;
+end;
+$$;
+
+revoke all on function public.add_family(text, jsonb) from public;
+grant execute on function public.add_family(text, jsonb) to anon, authenticated;

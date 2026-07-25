@@ -177,8 +177,10 @@
 
   .meter-track { height: 20px; border-radius: 999px; background: var(--section-bg); overflow: hidden; }
   .meter-fill { height: 100%; border-radius: 999px; background: var(--gold); transition: width 0.4s ease; }
-  .bar-item { margin-bottom: 0.9rem; }
+  .bar-item { margin-bottom: 0.9rem; display: block; width: 100%; text-align: inherit; }
   .bar-item:last-child { margin-bottom: 0; }
+  .bar-item-clickable { padding: 0.4rem; margin: -0.4rem -0.4rem 0.5rem; border-radius: 10px; transition: background 0.15s; }
+  .bar-item-clickable:active { background: var(--section-bg); }
   .bar-header { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.35rem; }
 
   /* lists */
@@ -889,13 +891,42 @@ function renderOverview() {
     <div class="card">
       <div style="font-size:0.9rem;font-weight:600;margin-bottom:0.9rem;">עלויות לפי קטגוריה</div>
       ${byCategory.map(c => `
-        <div class="bar-item">
+        <button class="bar-item bar-item-clickable" data-cat="${c.id}">
           <div class="bar-header"><span>${c.icon} ${c.label}</span><b>${fmtMoney(c.amount)}</b></div>
           <div class="meter-track"><div class="meter-fill" style="width:${maxAmount ? (c.amount / maxAmount) * 100 : 0}%"></div></div>
-        </div>
+        </button>
       `).join('')}
     </div>` : ''}
   `;
+
+  v.querySelectorAll('.bar-item-clickable').forEach(btn => {
+    btn.addEventListener('click', () => openCategoryExpensesModal(byCategory.find(c => c.id === btn.dataset.cat)));
+  });
+}
+
+function openCategoryExpensesModal(cat) {
+  const items = state.expenses.filter(e => e.category === cat.id).sort((a, b) => Number(b.amount) - Number(a.amount));
+  const total = items.reduce((s, e) => s + Number(e.amount), 0);
+  const rows = items.map(e => `
+    <div class="item-card">
+      <div class="item-top">
+        <div>
+          <div class="item-title">${escapeHtml(e.description)}</div>
+          ${e.notes ? `<div class="item-desc">${escapeHtml(e.notes)}</div>` : ''}
+          <div class="item-desc">${fmtDate(e.expense_date)}</div>
+        </div>
+        <div class="item-amount">${fmtMoney(e.amount)}</div>
+      </div>
+      <div class="item-meta"><span class="tag status-${e.status}">${EXPENSE_STATUSES.find(s => s.id === e.status).label}</span></div>
+    </div>
+  `).join('');
+  openModal(`
+    <div class="modal-title">${cat.icon} ${cat.label}</div>
+    <div class="list">${rows}</div>
+    <div class="stat-card wide" style="margin-top:0.9rem;"><span>סה"כ</span><span class="item-amount">${fmtMoney(total)}</span></div>
+    <div class="modal-actions"><button class="btn btn-ghost btn-block" id="mCancel">סגירה</button></div>
+  `);
+  $('#mCancel').addEventListener('click', closeModal);
 }
 
 function fmtMoney(n) { return '₪' + Number(n).toLocaleString('he-IL', { maximumFractionDigits: 0 }); }
@@ -1364,11 +1395,68 @@ function renderMoreMenu() {
       <span class="ic">📊</span>
       <span class="txt"><b>השוואת הצעות מחיר</b><span>השוואת ספקים לפי קטגוריה</span></span>
     </button>
+    <button class="more-card" id="moreAddFamily">
+      <span class="ic">➕</span>
+      <span class="txt"><b>הוספת משפחה/דירה חדשה</b><span>מרחב נפרד לגמרי — לא רואים את הדירות הקיימות</span></span>
+    </button>
   `;
   $('#moreContacts').addEventListener('click', () => switchView('contacts'));
   $('#moreFurniture').addEventListener('click', () => switchView('furniture'));
   $('#moreFloorplan').addEventListener('click', () => switchView('floorplan'));
   $('#moreQuotes').addEventListener('click', () => switchView('quotes'));
+  $('#moreAddFamily').addEventListener('click', openAddFamilyModal);
+}
+
+function openAddFamilyModal() {
+  openModal(`
+    <div class="modal-title">➕ משפחה / דירה חדשה</div>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:0.9rem;">המשפחה החדשה תקבל מרחב נפרד לגמרי — היא תראה רק את הדירה הזו, ולא את הדירות הקיימות.</p>
+    <div class="field"><label>שם הדירה / המשפחה</label><input type="text" id="mFamAptName" placeholder="לדוגמה: משפחת כהן"></div>
+    <label style="font-size:0.8rem;color:var(--muted);font-weight:500;">בני המשפחה (שם + קוד בן 4 ספרות לכל אחד)</label>
+    <div id="famMembers" style="margin:0.6rem 0;"></div>
+    <button class="btn btn-ghost btn-block" id="famAddRow" style="margin-bottom:1rem;">+ הוספת בן משפחה</button>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-block" id="mCancel">ביטול</button>
+      <button class="btn btn-gold btn-block" id="mSave">יצירה</button>
+    </div>
+    <p id="famError" class="hidden" style="color:var(--danger);font-size:0.85rem;margin-top:0.8rem;text-align:center;"></p>
+  `);
+
+  const wrap = $('#famMembers');
+  function addFamRow() {
+    const row = el('div', 'setup-member-row');
+    row.innerHTML = `<input type="text" placeholder="שם" class="fam-name"><input type="tel" inputmode="numeric" maxlength="4" placeholder="4 ספרות" class="pin-input fam-pin">`;
+    wrap.appendChild(row);
+  }
+  addFamRow();
+  $('#famAddRow').addEventListener('click', addFamRow);
+  $('#mCancel').addEventListener('click', closeModal);
+
+  $('#mSave').addEventListener('click', async () => {
+    const errEl = $('#famError');
+    errEl.classList.add('hidden');
+    const aptName = $('#mFamAptName').value.trim();
+    const rows = [...document.querySelectorAll('#famMembers .setup-member-row')];
+    const members = rows.map(r => ({
+      full_name: r.querySelector('.fam-name').value.trim(),
+      pin: r.querySelector('.fam-pin').value.trim(),
+    }));
+
+    if (!aptName) { errEl.textContent = 'נא למלא שם דירה'; errEl.classList.remove('hidden'); return; }
+    for (const m of members) {
+      if (!m.full_name) { errEl.textContent = 'נא למלא שם לכל בני המשפחה'; errEl.classList.remove('hidden'); return; }
+      if (!/^\d{4}$/.test(m.pin)) { errEl.textContent = `נא להזין קוד בן 4 ספרות עבור ${m.full_name}`; errEl.classList.remove('hidden'); return; }
+    }
+
+    const btn = $('#mSave');
+    btn.disabled = true; btn.textContent = 'יוצר...';
+    const { error } = await supabase.rpc('add_family', { p_apartment_name: aptName, p_members: members });
+    btn.disabled = false; btn.textContent = 'יצירה';
+
+    if (error) { errEl.textContent = error.message || 'שגיאה ביצירה'; errEl.classList.remove('hidden'); return; }
+    closeModal();
+    toast('המשפחה נוצרה! הם יכולים להתחבר עכשיו עם השם והקוד שלהם');
+  });
 }
 
 // ===================== CONTACTS =====================
