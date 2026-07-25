@@ -1398,12 +1398,55 @@ function renderMoreMenu() {
       <span class="ic">➕</span>
       <span class="txt"><b>הוספת משפחה/דירה חדשה</b><span>מרחב נפרד לגמרי — לא רואים את הדירות הקיימות</span></span>
     </button>
+    <button class="more-card" id="moreExport">
+      <span class="ic">📥</span>
+      <span class="txt"><b>ייצוא / גיבוי נתונים</b><span>קובץ Excel עם עלויות, משימות, אנשי קשר ועוד — לדירה הנוכחית</span></span>
+    </button>
   `;
   $('#moreContacts').addEventListener('click', () => switchView('contacts'));
   $('#moreFurniture').addEventListener('click', () => switchView('furniture'));
   $('#moreFloorplan').addEventListener('click', () => switchView('floorplan'));
   $('#moreQuotes').addEventListener('click', () => switchView('quotes'));
   $('#moreAddFamily').addEventListener('click', openAddFamilyModal);
+  $('#moreExport').addEventListener('click', exportAllData);
+}
+
+async function exportAllData() {
+  toast('מכין קובץ...');
+  const XLSX = await import('https://esm.sh/xlsx@0.18.5');
+
+  const wb = XLSX.utils.book_new();
+  const addSheet = (rows, name) => {
+    const sheet = XLSX.utils.json_to_sheet(rows.length ? rows : [{ 'אין נתונים': '' }]);
+    XLSX.utils.book_append_sheet(wb, sheet, name);
+  };
+
+  addSheet(state.expenses.map(e => ({
+    'תיאור': e.description, 'קטגוריה': catLabel(e.category), 'סכום': Number(e.amount),
+    'סטטוס': e.status === 'paid' ? 'שולם' : 'ממתין לתשלום', 'תאריך': e.expense_date, 'הערות': e.notes || '',
+  })), 'עלויות');
+
+  addSheet(state.tasks.map(t => ({
+    'כותרת': t.title, 'קטגוריה': catLabel(t.category), 'סטטוס': t.status === 'done' ? 'בוצע' : 'פתוח',
+    'תאריך יעד': t.due_date || '', 'עלות': t.cost != null ? Number(t.cost) : '', 'פירוט': t.description || '',
+  })), 'משימות');
+
+  addSheet(state.contacts.map(c => ({
+    'שם': c.name, 'תחום': contactCatLabel(c.category), 'טלפון': c.phone || '', 'הערות': c.notes || '',
+  })), 'אנשי קשר');
+
+  addSheet(state.furnitureItems.map(f => ({
+    'פריט': f.title, 'קטגוריה': furnCatLabel(f.category), 'חנות': f.store || '',
+    'מחיר': f.price != null ? Number(f.price) : '', 'נרכש': f.purchased ? 'כן' : 'לא', 'תוקף אחריות': f.warranty_until || '',
+  })), 'ריהוט וציוד');
+
+  addSheet(state.quotes.map(q => ({
+    'ספק': q.supplier_name, 'קטגוריה': catLabel(q.category), 'מחיר': q.price != null ? Number(q.price) : '',
+    'נבחר כזוכה': q.is_selected ? 'כן' : 'לא', 'הערות': q.notes || '',
+  })), 'הצעות מחיר');
+
+  const aptName = state.apartments.find(a => a.id === state.currentApartmentId)?.display_name || 'דירה';
+  XLSX.writeFile(wb, `${aptName} - גיבוי.xlsx`);
 }
 
 function openAddFamilyModal() {
