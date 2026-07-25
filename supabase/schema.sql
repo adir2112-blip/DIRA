@@ -399,3 +399,89 @@ create policy "family can delete furniture" on furniture_items for delete to aut
   using (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
 
 alter publication supabase_realtime add table public.contacts, public.furniture_items, public.category_deadlines;
+
+-- DIRA-CHANGE migration 003: interactive floor plan pins + supplier quote comparison
+-- Project: dira-change (ref bjicskzwuiojhqdwfyov) only.
+
+-- ===== floor_plans: one plan image per apartment =====
+create table if not exists floor_plans (
+  apartment_id uuid primary key references apartments(id),
+  storage_path text not null,
+  updated_at   timestamptz not null default now()
+);
+alter table floor_plans enable row level security;
+
+drop policy if exists "family can read floor_plans" on floor_plans;
+drop policy if exists "family can write floor_plans" on floor_plans;
+drop policy if exists "family can update floor_plans" on floor_plans;
+drop policy if exists "family can delete floor_plans" on floor_plans;
+create policy "family can read floor_plans" on floor_plans for select to authenticated
+  using (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
+create policy "family can write floor_plans" on floor_plans for insert to authenticated
+  with check (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
+create policy "family can update floor_plans" on floor_plans for update to authenticated
+  using     (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()))
+  with check(exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
+create policy "family can delete floor_plans" on floor_plans for delete to authenticated
+  using (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
+
+-- ===== plan_pins: markers on the floor plan, optionally linked to a task =====
+create table if not exists plan_pins (
+  id                 uuid primary key default gen_random_uuid(),
+  apartment_id       uuid not null references apartments(id),
+  x                  numeric(5,2) not null check (x between 0 and 100),
+  y                  numeric(5,2) not null check (y between 0 and 100),
+  label              text not null,
+  linked_task_id     uuid references tasks(id) on delete set null,
+  added_by_member_id uuid not null references members(id),
+  created_at         timestamptz not null default now()
+);
+create index if not exists idx_plan_pins_apartment on plan_pins(apartment_id);
+alter table plan_pins enable row level security;
+
+drop policy if exists "family can read plan_pins" on plan_pins;
+drop policy if exists "family can write plan_pins" on plan_pins;
+drop policy if exists "family can update plan_pins" on plan_pins;
+drop policy if exists "family can delete plan_pins" on plan_pins;
+create policy "family can read plan_pins" on plan_pins for select to authenticated
+  using (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
+create policy "family can write plan_pins" on plan_pins for insert to authenticated
+  with check (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
+create policy "family can update plan_pins" on plan_pins for update to authenticated
+  using     (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()))
+  with check(exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
+create policy "family can delete plan_pins" on plan_pins for delete to authenticated
+  using (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
+
+-- ===== quotes: supplier price comparison per category =====
+create table if not exists quotes (
+  id                 uuid primary key default gen_random_uuid(),
+  apartment_id       uuid not null references apartments(id),
+  category           text not null check (category in
+                        ('kitchen','doors','marble_ceramic','electrical','plumbing','ac','garden_exterior','general')),
+  supplier_name      text not null,
+  price              numeric(12,2),
+  notes              text,
+  is_selected        boolean not null default false,
+  added_by_member_id uuid not null references members(id),
+  created_at         timestamptz not null default now(),
+  updated_at         timestamptz not null default now()
+);
+create index if not exists idx_quotes_apartment on quotes(apartment_id, category);
+alter table quotes enable row level security;
+
+drop policy if exists "family can read quotes" on quotes;
+drop policy if exists "family can write quotes" on quotes;
+drop policy if exists "family can update quotes" on quotes;
+drop policy if exists "family can delete quotes" on quotes;
+create policy "family can read quotes" on quotes for select to authenticated
+  using (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
+create policy "family can write quotes" on quotes for insert to authenticated
+  with check (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
+create policy "family can update quotes" on quotes for update to authenticated
+  using     (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()))
+  with check(exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
+create policy "family can delete quotes" on quotes for delete to authenticated
+  using (exists (select 1 from sessions s where s.auth_uid = (select auth.uid()) and s.expires_at > now()));
+
+alter publication supabase_realtime add table public.floor_plans, public.plan_pins, public.quotes;

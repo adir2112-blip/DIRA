@@ -222,6 +222,12 @@
   .more-card .txt b { display: block; font-size: 1rem; }
   .more-card .txt span { font-size: 0.8rem; color: var(--muted); }
   .back-row { display: flex; align-items: center; gap: 0.4rem; color: var(--muted); font-size: 0.9rem; margin-bottom: 0.9rem; }
+  .plan-wrap { position: relative; cursor: crosshair; }
+  .pin-marker {
+    position: absolute; width: 26px; height: 26px; border-radius: 50%; background: var(--gold); color: var(--charcoal);
+    font-size: 0.72rem; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    transform: translate(-50%, -50%); border: 2px solid var(--warm-white); box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  }
 
   .empty-state { text-align: center; padding: 3rem 1rem; color: var(--muted); }
   .empty-state .em { font-size: 2rem; margin-bottom: 0.6rem; }
@@ -373,6 +379,8 @@
     <section id="view-more" class="view hidden"></section>
     <section id="view-contacts" class="view hidden"></section>
     <section id="view-furniture" class="view hidden"></section>
+    <section id="view-floorplan" class="view hidden"></section>
+    <section id="view-quotes" class="view hidden"></section>
   </main>
 
   <button class="fab hidden" id="fabAdd">+</button>
@@ -455,6 +463,9 @@ let state = {
   contacts: [],
   furnitureItems: [],
   categoryDeadlines: [],
+  floorPlan: null,
+  planPins: [],
+  quotes: [],
   realtimeChannel: null,
 };
 
@@ -692,7 +703,7 @@ function switchView(view) {
   state.currentView = view;
   document.querySelectorAll('main .view').forEach(v => v.classList.add('hidden'));
   $('#view-' + view).classList.remove('hidden');
-  const tabForView = (view === 'contacts' || view === 'furniture') ? 'more' : view;
+  const tabForView = ['contacts', 'furniture', 'floorplan', 'quotes'].includes(view) ? 'more' : view;
   document.querySelectorAll('.tab-item').forEach(b => b.classList.toggle('active', b.dataset.view === tabForView));
   renderCurrentView();
 }
@@ -707,6 +718,9 @@ function setupRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'contacts' }, () => refreshCurrentApartmentData())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'furniture_items' }, () => refreshCurrentApartmentData())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'category_deadlines' }, () => refreshCurrentApartmentData())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'floor_plans' }, () => refreshCurrentApartmentData())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_pins' }, () => refreshCurrentApartmentData())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, () => refreshCurrentApartmentData())
     .subscribe();
 }
 
@@ -718,13 +732,16 @@ function refreshCurrentApartmentData() {
 
 async function loadAllData() {
   const aptId = state.currentApartmentId;
-  const [expRes, taskRes, docRes, contactRes, furnRes, deadlineRes] = await Promise.all([
+  const [expRes, taskRes, docRes, contactRes, furnRes, deadlineRes, planRes, pinRes, quoteRes] = await Promise.all([
     supabase.from('expenses').select('*').eq('apartment_id', aptId).eq('is_deleted', false).order('expense_date', { ascending: false }),
     supabase.from('tasks').select('*').eq('apartment_id', aptId).order('created_at', { ascending: false }),
     supabase.from('documents').select('*').eq('apartment_id', aptId).order('created_at', { ascending: false }),
     supabase.from('contacts').select('*').eq('apartment_id', aptId).order('created_at', { ascending: false }),
     supabase.from('furniture_items').select('*').eq('apartment_id', aptId).order('created_at', { ascending: false }),
     supabase.from('category_deadlines').select('*').eq('apartment_id', aptId),
+    supabase.from('floor_plans').select('*').eq('apartment_id', aptId).maybeSingle(),
+    supabase.from('plan_pins').select('*').eq('apartment_id', aptId).order('created_at', { ascending: true }),
+    supabase.from('quotes').select('*').eq('apartment_id', aptId).order('price', { ascending: true }),
   ]);
   state.expenses = expRes.data || [];
   state.tasks = taskRes.data || [];
@@ -732,6 +749,9 @@ async function loadAllData() {
   state.contacts = contactRes.data || [];
   state.furnitureItems = furnRes.data || [];
   state.categoryDeadlines = deadlineRes.data || [];
+  state.floorPlan = planRes.data || null;
+  state.planPins = pinRes.data || [];
+  state.quotes = quoteRes.data || [];
 }
 
 function renderCurrentView() {
@@ -743,6 +763,8 @@ function renderCurrentView() {
   if (state.currentView === 'more') { renderMoreMenu(); fab.classList.add('hidden'); }
   if (state.currentView === 'contacts') { renderContacts(); fab.classList.remove('hidden'); fab.onclick = () => openContactModal(); }
   if (state.currentView === 'furniture') { renderFurniture(); fab.classList.remove('hidden'); fab.onclick = () => openFurnitureModal(); }
+  if (state.currentView === 'floorplan') { renderFloorPlan(); fab.classList.add('hidden'); }
+  if (state.currentView === 'quotes') { renderQuotes(); fab.classList.remove('hidden'); fab.onclick = () => openQuoteModal(); }
 }
 
 // ===================== OVERVIEW =====================
@@ -1205,9 +1227,19 @@ function renderMoreMenu() {
       <span class="ic">🛋️</span>
       <span class="txt"><b>ריהוט, ציוד ואחריות</b><span>רשימת קניות לאחרי הכניסה לדירה</span></span>
     </button>
+    <button class="more-card" id="moreFloorplan">
+      <span class="ic">🗺️</span>
+      <span class="txt"><b>שרטוט הדירה</b><span>סימון נקודות ישירות על התוכנית</span></span>
+    </button>
+    <button class="more-card" id="moreQuotes">
+      <span class="ic">📊</span>
+      <span class="txt"><b>השוואת הצעות מחיר</b><span>השוואת ספקים לפי קטגוריה</span></span>
+    </button>
   `;
   $('#moreContacts').addEventListener('click', () => switchView('contacts'));
   $('#moreFurniture').addEventListener('click', () => switchView('furniture'));
+  $('#moreFloorplan').addEventListener('click', () => switchView('floorplan'));
+  $('#moreQuotes').addEventListener('click', () => switchView('quotes'));
 }
 
 // ===================== CONTACTS =====================
@@ -1410,6 +1442,223 @@ function openFurnitureModal(existing) {
     } else {
       payload.added_by_member_id = state.member.id;
       ({ error } = await supabase.from('furniture_items').insert(payload));
+    }
+    if (error) { toast('שגיאה בשמירה', true); return; }
+    closeModal();
+    await loadAllData(); renderCurrentView(); toast('נשמר בהצלחה');
+  });
+}
+
+// ===================== FLOOR PLAN =====================
+function renderFloorPlan() {
+  const v = $('#view-floorplan');
+  v.innerHTML = `
+    <button class="back-row" id="backToMore">→ עוד</button>
+    <h2 class="view-title">שרטוט הדירה</h2>
+  `;
+  $('#backToMore').addEventListener('click', () => switchView('more'));
+
+  if (!state.floorPlan) {
+    const box = el('div', 'card');
+    box.innerHTML = `
+      <p style="color:var(--muted);font-size:0.9rem;margin-bottom:0.9rem;">העלו תמונה של תוכנית הדירה, ואז אפשר יהיה ללחוץ עליה בכל מקום כדי לסמן נקודה (כמו נקודת מים, שקע חשמל וכו').</p>
+      <input type="file" id="planFile" accept="image/*" style="width:100%;margin-bottom:0.8rem;">
+      <button class="btn btn-gold btn-block" id="planUploadBtn">העלאת שרטוט</button>
+    `;
+    v.appendChild(box);
+    $('#planUploadBtn').addEventListener('click', uploadFloorPlan);
+    return;
+  }
+
+  const wrap = el('div', 'card');
+  wrap.innerHTML = `
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:0.7rem;">לחצו על השרטוט כדי להוסיף נקודה. לחצו על נקודה קיימת לעריכה.</p>
+    <div class="plan-wrap" id="planWrap">
+      <img id="planImg" style="width:100%;display:block;border-radius:10px;">
+    </div>
+    <button class="btn btn-ghost btn-block" id="planReplaceBtn" style="margin-top:0.9rem;">🔄 החלפת שרטוט</button>
+  `;
+  v.appendChild(wrap);
+  $('#planReplaceBtn').addEventListener('click', () => { state.floorPlan = null; renderFloorPlan(); });
+
+  const img = $('#planImg');
+  supabase.storage.from('attachments').createSignedUrl(state.floorPlan.storage_path, 3600).then(({ data }) => {
+    if (data?.signedUrl) img.src = data.signedUrl;
+  });
+
+  const planWrap = $('#planWrap');
+  planWrap.addEventListener('click', (e) => {
+    if (e.target.closest('.pin-marker')) return;
+    const rect = img.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    openPinModal(x, y);
+  });
+
+  state.planPins.forEach((pin, i) => {
+    const marker = el('button', 'pin-marker', String(i + 1));
+    marker.style.left = pin.x + '%';
+    marker.style.top = pin.y + '%';
+    marker.addEventListener('click', (e) => { e.stopPropagation(); openPinModal(null, null, pin); });
+    planWrap.appendChild(marker);
+  });
+}
+
+async function uploadFloorPlan() {
+  const file = $('#planFile').files[0];
+  if (!file) { toast('נא לבחור תמונה', true); return; }
+  const btn = $('#planUploadBtn');
+  btn.disabled = true; btn.textContent = 'מעלה...';
+
+  const path = `${state.currentApartmentId}/floorplan/${crypto.randomUUID()}${safeFileExt(file)}`;
+  const { error: upErr } = await supabase.storage.from('attachments').upload(path, file);
+  if (upErr) { toast('שגיאה בהעלאה', true); btn.disabled = false; btn.textContent = 'העלאת שרטוט'; return; }
+
+  const { error } = await supabase.from('floor_plans').upsert({
+    apartment_id: state.currentApartmentId, storage_path: path, updated_at: new Date().toISOString(),
+  }, { onConflict: 'apartment_id' });
+  if (error) { toast('שגיאה בשמירה', true); btn.disabled = false; btn.textContent = 'העלאת שרטוט'; return; }
+
+  await loadAllData(); renderCurrentView(); toast('השרטוט הועלה בהצלחה');
+}
+
+function openPinModal(x, y, existing) {
+  const isEdit = !!existing;
+  const taskOptions = state.tasks.map(t => `<option value="${t.id}" ${existing?.linked_task_id === t.id ? 'selected' : ''}>${escapeHtml(t.title)}</option>`).join('');
+  openModal(`
+    <div class="modal-title">${isEdit ? 'עריכת נקודה' : 'נקודה חדשה'}</div>
+    <div class="field"><label>תווית קצרה</label><input type="text" id="mPinLabel" value="${isEdit ? escapeHtml(existing.label) : ''}" placeholder="לדוגמה: נקודת מים"></div>
+    <div class="field"><label>קישור למשימה (אופציונלי)</label>
+      <select id="mPinTask"><option value="">ללא קישור</option>${taskOptions}</select>
+    </div>
+    <div class="modal-actions">
+      ${isEdit ? '<button class="btn btn-danger btn-block" id="mDeletePin">מחיקה</button>' : ''}
+      <button class="btn btn-ghost btn-block" id="mCancel">ביטול</button>
+      <button class="btn btn-gold btn-block" id="mSave">שמירה</button>
+    </div>
+  `);
+
+  $('#mCancel').addEventListener('click', closeModal);
+  if (isEdit) {
+    $('#mDeletePin').addEventListener('click', async () => {
+      if (!confirm('למחוק את הנקודה?')) return;
+      await supabase.from('plan_pins').delete().eq('id', existing.id);
+      closeModal();
+      await loadAllData(); renderCurrentView(); toast('הנקודה נמחקה');
+    });
+  }
+  $('#mSave').addEventListener('click', async () => {
+    const label = $('#mPinLabel').value.trim();
+    const linkedTaskId = $('#mPinTask').value || null;
+    if (!label) { toast('נא למלא תווית', true); return; }
+
+    let error;
+    if (isEdit) {
+      ({ error } = await supabase.from('plan_pins').update({ label, linked_task_id: linkedTaskId }).eq('id', existing.id));
+    } else {
+      ({ error } = await supabase.from('plan_pins').insert({
+        apartment_id: state.currentApartmentId, x, y, label, linked_task_id: linkedTaskId, added_by_member_id: state.member.id,
+      }));
+    }
+    if (error) { toast('שגיאה בשמירה', true); return; }
+    closeModal();
+    await loadAllData(); renderCurrentView(); toast('נשמר בהצלחה');
+  });
+}
+
+// ===================== QUOTES =====================
+function renderQuotes() {
+  const v = $('#view-quotes');
+  v.innerHTML = `
+    <button class="back-row" id="backToMore">→ עוד</button>
+    <h2 class="view-title">השוואת הצעות מחיר</h2>
+    <div id="quoteGroups"></div>
+  `;
+  $('#backToMore').addEventListener('click', () => switchView('more'));
+
+  const wrap = $('#quoteGroups');
+  if (state.quotes.length === 0) {
+    wrap.innerHTML = `<div class="empty-state"><div class="em">📊</div>אין עדיין הצעות מחיר</div>`;
+    return;
+  }
+  CATEGORIES.forEach(cat => {
+    const items = state.quotes.filter(q => q.category === cat.id);
+    if (items.length === 0) return;
+    const group = el('div', 'cat-group');
+    group.innerHTML = `<h3>${cat.icon} ${cat.label}</h3>`;
+    const list = el('div', 'list');
+    items.forEach(q => {
+      const card = el('div', 'item-card');
+      card.innerHTML = `
+        <div class="item-top">
+          <div>
+            <div class="item-title">${escapeHtml(q.supplier_name)}${q.is_selected ? ' <span class="tag status-done">✓ נבחר</span>' : ''}</div>
+            ${q.notes ? `<div class="item-desc">${escapeHtml(q.notes)}</div>` : ''}
+          </div>
+          ${q.price != null ? `<div class="item-amount">${fmtMoney(q.price)}</div>` : ''}
+        </div>
+        <div class="item-actions" style="margin-top:0.7rem;">
+          ${!q.is_selected ? '<button class="icon-btn btn-select" title="בחירה כזוכה">⭐</button>' : ''}
+          <button class="icon-btn btn-edit">✏️</button>
+          <button class="icon-btn btn-del">🗑️</button>
+        </div>
+      `;
+      const selectBtn = card.querySelector('.btn-select');
+      if (selectBtn) selectBtn.addEventListener('click', () => selectQuote(q));
+      card.querySelector('.btn-edit').addEventListener('click', () => openQuoteModal(q));
+      card.querySelector('.btn-del').addEventListener('click', () => deleteQuote(q.id));
+      list.appendChild(card);
+    });
+    group.appendChild(list);
+    wrap.appendChild(group);
+  });
+}
+
+async function selectQuote(q) {
+  await supabase.from('quotes').update({ is_selected: false }).eq('apartment_id', state.currentApartmentId).eq('category', q.category);
+  await supabase.from('quotes').update({ is_selected: true }).eq('id', q.id);
+  await loadAllData(); renderCurrentView(); toast('סומן כזוכה');
+}
+
+async function deleteQuote(id) {
+  if (!confirm('למחוק את ההצעה?')) return;
+  const { error } = await supabase.from('quotes').delete().eq('id', id);
+  if (error) { toast('שגיאה במחיקה', true); return; }
+  await loadAllData(); renderCurrentView(); toast('נמחק');
+}
+
+function openQuoteModal(existing) {
+  const isEdit = !!existing;
+  openModal(`
+    <div class="modal-title">${isEdit ? 'עריכת הצעה' : 'הצעת מחיר חדשה'}</div>
+    <div class="cat-picker" id="mCatPicker"></div>
+    <div class="field"><label>שם הספק</label><input type="text" id="mSupplier" value="${isEdit ? escapeHtml(existing.supplier_name) : ''}"></div>
+    <div class="field"><label>מחיר (אופציונלי, ₪)</label><input type="number" id="mQuotePrice" min="0" step="1" value="${isEdit && existing.price != null ? existing.price : ''}"></div>
+    <div class="field"><label>הערות (מה כלול/לא כלול, אופציונלי)</label><textarea id="mQuoteNotes" rows="2">${isEdit ? escapeHtml(existing.notes || '') : ''}</textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-block" id="mCancel">ביטול</button>
+      <button class="btn btn-gold btn-block" id="mSave">שמירה</button>
+    </div>
+  `);
+
+  let selCat = existing?.category || 'general';
+  renderCatPicker($('#mCatPicker'), selCat, c => selCat = c);
+
+  $('#mCancel').addEventListener('click', closeModal);
+  $('#mSave').addEventListener('click', async () => {
+    const supplierName = $('#mSupplier').value.trim();
+    const priceVal = $('#mQuotePrice').value;
+    const price = priceVal === '' ? null : parseFloat(priceVal);
+    const notes = $('#mQuoteNotes').value.trim();
+    if (!supplierName) { toast('נא למלא שם ספק', true); return; }
+
+    const payload = { apartment_id: state.currentApartmentId, category: selCat, supplier_name: supplierName, price, notes: notes || null };
+    let error;
+    if (isEdit) {
+      ({ error } = await supabase.from('quotes').update(payload).eq('id', existing.id));
+    } else {
+      payload.added_by_member_id = state.member.id;
+      ({ error } = await supabase.from('quotes').insert(payload));
     }
     if (error) { toast('שגיאה בשמירה', true); return; }
     closeModal();
