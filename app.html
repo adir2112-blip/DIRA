@@ -548,6 +548,12 @@ async function onPinKey(k) {
   updatePinDots();
   if (currentPin.length === 4) await submitLogin();
 }
+
+document.addEventListener('keydown', (e) => {
+  if ($('#screen-login-pin').classList.contains('hidden')) return;
+  if (/^[0-9]$/.test(e.key)) { onPinKey(e.key); }
+  else if (e.key === 'Backspace') { onPinKey('⌫'); }
+});
 async function submitLogin() {
   const { data, error } = await supabase.rpc('login_with_pin', { p_full_name: selectedLoginName, p_id_last4: currentPin });
   if (error) {
@@ -686,6 +692,7 @@ function renderCosts() {
     <h2 class="view-title">עלויות</h2>
     <div class="filter-row" id="costFilterRow"></div>
     <div class="list" id="costList"></div>
+    <div class="stat-card wide" id="costTotal" style="margin-top:0.9rem;"></div>
   `;
   const row = $('#costFilterRow');
   filters.forEach(f => {
@@ -695,6 +702,9 @@ function renderCosts() {
   });
 
   const listEl = $('#costList');
+  const total = list.reduce((s, e) => s + Number(e.amount), 0);
+  $('#costTotal').innerHTML = `<span>סה"כ${costFilter === 'all' ? '' : ' (' + filters.find(f => f.id === costFilter).label + ')'}</span><span class="item-amount">${fmtMoney(total)}</span>`;
+
   if (list.length === 0) {
     listEl.innerHTML = `<div class="empty-state"><div class="em">💰</div>אין עדיין עלויות רשומות</div>`;
     return;
