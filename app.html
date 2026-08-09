@@ -198,6 +198,9 @@
   }
   .checkbox.checked { background: var(--gold); }
   .checkbox.checked::after { content: '✓'; color: var(--charcoal); font-weight: 700; font-size: 0.95rem; }
+  .reminder-row { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.5rem; font-size: 0.88rem; }
+  .reminder-row .checkbox { width: 22px; height: 22px; }
+  .reminder-row .checkbox.checked::after { font-size: 0.8rem; }
   .due-badge {
     font-size: 0.75rem; font-weight: 700; padding: 0.28rem 0.6rem; border-radius: 999px;
     background: rgba(90,122,90,0.15); color: var(--success);
@@ -1138,7 +1141,7 @@ function renderTasks() {
               <div class="item-title${isDone ? ' done' : ''}">${escapeHtml(t.title)}</div>
               ${t.description ? `<div class="item-desc">${escapeHtml(t.description)}</div>` : ''}
               <div class="item-meta">
-                ${t.due_date ? `<span class="tag${overdue ? ' status-pending' : ''}">📅 ${fmtDate(t.due_date)}</span>` : ''}
+                ${t.due_date ? `<span class="tag${overdue ? ' status-pending' : ''}">📅 ${fmtDate(t.due_date)}${t.due_time ? ' ' + t.due_time.slice(0, 5) : ''}</span>` : ''}
                 ${daysInfo ? `<span class="due-badge ${daysInfo.cls}">${daysInfo.label}</span>` : ''}
                 ${t.cost != null ? `<span class="tag">💰 ${fmtMoney(t.cost)}</span>` : ''}
               </div>
@@ -1215,8 +1218,15 @@ function openTaskModal(existing, defaultCategory) {
     <div class="field"><label>כותרת</label><input type="text" id="mTitle" value="${isEdit ? escapeHtml(existing.title) : ''}" placeholder="למשל: נקודת מים בגינה ליד המרפסת"></div>
     <div class="field"><label>פירוט (אופציונלי)</label><textarea id="mTaskDesc" rows="3">${isEdit ? escapeHtml(existing.description || '') : ''}</textarea></div>
     <div class="field-row">
-      <div class="field"><label>תאריך צפוי לביצוע (אופציונלי)</label><input type="date" id="mDueDate" value="${isEdit ? (existing.due_date || '') : ''}"></div>
-      <div class="field"><label>עלות השינוי (אופציונלי, ₪)</label><input type="number" id="mTaskCost" min="0" step="1" value="${isEdit && existing.cost != null ? existing.cost : ''}"></div>
+      <div class="field"><label>תאריך (אופציונלי)</label><input type="date" id="mDueDate" value="${isEdit ? (existing.due_date || '') : ''}"></div>
+      <div class="field"><label>שעה (אופציונלי)</label><input type="time" id="mDueTime" value="${isEdit ? (existing.due_time || '') : ''}"></div>
+    </div>
+    <div class="field"><label>עלות השינוי (אופציונלי, ₪)</label><input type="number" id="mTaskCost" min="0" step="1" value="${isEdit && existing.cost != null ? existing.cost : ''}"></div>
+    <div class="field">
+      <label>תזכורות בוואטסאפ (דורש תאריך ושעה)</label>
+      <div class="reminder-row" data-key="remind_24h"><button type="button" class="checkbox${existing?.remind_24h ? ' checked' : ''}"></button><span>24 שעות לפני</span></div>
+      <div class="reminder-row" data-key="remind_12h"><button type="button" class="checkbox${existing?.remind_12h ? ' checked' : ''}"></button><span>12 שעות לפני</span></div>
+      <div class="reminder-row" data-key="remind_3h"><button type="button" class="checkbox${existing?.remind_3h ? ' checked' : ''}"></button><span>3 שעות לפני</span></div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost btn-block" id="mCancel">ביטול</button>
@@ -1237,18 +1247,26 @@ function openTaskModal(existing, defaultCategory) {
   }
   renderSuggestRow();
 
+  document.querySelectorAll('.reminder-row .checkbox').forEach(cb => {
+    cb.addEventListener('click', () => cb.classList.toggle('checked'));
+  });
+
   $('#mCancel').addEventListener('click', closeModal);
   $('#mSave').addEventListener('click', async () => {
     const title = $('#mTitle').value.trim();
     const description = $('#mTaskDesc').value.trim();
     const dueDate = $('#mDueDate').value || null;
+    const dueTime = $('#mDueTime').value || null;
     const costVal = $('#mTaskCost').value;
     const cost = costVal === '' ? null : parseFloat(costVal);
     if (!title) { toast('נא למלא כותרת', true); return; }
 
     const payload = {
       apartment_id: state.currentApartmentId,
-      category: selCat, title, description: description || null, due_date: dueDate, cost,
+      category: selCat, title, description: description || null, due_date: dueDate, due_time: dueTime, cost,
+      remind_24h: document.querySelector('.reminder-row[data-key="remind_24h"] .checkbox').classList.contains('checked'),
+      remind_12h: document.querySelector('.reminder-row[data-key="remind_12h"] .checkbox').classList.contains('checked'),
+      remind_3h: document.querySelector('.reminder-row[data-key="remind_3h"] .checkbox').classList.contains('checked'),
     };
     let error;
     if (isEdit) {
