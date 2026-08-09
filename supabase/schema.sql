@@ -97,6 +97,10 @@ create table if not exists tasks (
   remind_24h         boolean not null default false,
   remind_12h         boolean not null default false,
   remind_3h          boolean not null default false,
+  reminder_24h_sent_at timestamptz,
+  reminder_12h_sent_at timestamptz,
+  reminder_3h_sent_at  timestamptz,
+  reminder_extra_phone text,
   added_by_member_id uuid not null references members(id),
   created_at         timestamptz not null default now(),
   updated_at         timestamptz not null default now(),
@@ -899,3 +903,192 @@ select cron.schedule(
   '*/15 * * * *',
   $$select public.send_due_reminders();$$
 );
+
+-- DIRA-CHANGE migration 006: optional extra reminder recipient per task
+-- Project: dira-change (ref bjicskzwuiojhqdwfyov) only.
+
+alter table tasks add column if not exists reminder_extra_phone text;
+
+create or replace function public.send_due_reminders()
+returns void
+language sql
+security definer
+set search_path = public, extensions
+as $$
+  -- 24h — primary number
+  select net.http_post(
+    url := 'https://whatsapp-bot-production-120a.up.railway.app/api/send',
+    headers := '{"Content-Type":"application/json"}'::jsonb,
+    body := jsonb_build_object(
+      'phone', '972509143496',
+      'message', format('תזכורת (24 שעות מראש): %s — %s ב-%s בשעה %s',
+        t.title, a.display_name, to_char(t.due_date,'DD/MM'), to_char(t.due_time,'HH24:MI')),
+      'source', 'רכישת דירה'
+    )
+  )
+  from tasks t join apartments a on a.id = t.apartment_id
+  where t.remind_24h and t.reminder_24h_sent_at is null and t.status <> 'done'
+    and t.due_date is not null and t.due_time is not null
+    and (t.due_date + t.due_time) - interval '24 hours' <= now()
+    and (t.due_date + t.due_time) > now() - interval '2 hours';
+
+  -- 24h — optional extra number
+  select net.http_post(
+    url := 'https://whatsapp-bot-production-120a.up.railway.app/api/send',
+    headers := '{"Content-Type":"application/json"}'::jsonb,
+    body := jsonb_build_object(
+      'phone', t.reminder_extra_phone,
+      'message', format('תזכורת (24 שעות מראש): %s — %s ב-%s בשעה %s',
+        t.title, a.display_name, to_char(t.due_date,'DD/MM'), to_char(t.due_time,'HH24:MI')),
+      'source', 'רכישת דירה'
+    )
+  )
+  from tasks t join apartments a on a.id = t.apartment_id
+  where t.remind_24h and t.reminder_24h_sent_at is null and t.status <> 'done'
+    and t.reminder_extra_phone is not null
+    and t.due_date is not null and t.due_time is not null
+    and (t.due_date + t.due_time) - interval '24 hours' <= now()
+    and (t.due_date + t.due_time) > now() - interval '2 hours';
+
+  update tasks set reminder_24h_sent_at = now()
+  where remind_24h and reminder_24h_sent_at is null and status <> 'done'
+    and due_date is not null and due_time is not null
+    and (due_date + due_time) - interval '24 hours' <= now()
+    and (due_date + due_time) > now() - interval '2 hours';
+
+  -- 12h — primary number
+  select net.http_post(
+    url := 'https://whatsapp-bot-production-120a.up.railway.app/api/send',
+    headers := '{"Content-Type":"application/json"}'::jsonb,
+    body := jsonb_build_object(
+      'phone', '972509143496',
+      'message', format('תזכורת (12 שעות מראש): %s — %s ב-%s בשעה %s',
+        t.title, a.display_name, to_char(t.due_date,'DD/MM'), to_char(t.due_time,'HH24:MI')),
+      'source', 'רכישת דירה'
+    )
+  )
+  from tasks t join apartments a on a.id = t.apartment_id
+  where t.remind_12h and t.reminder_12h_sent_at is null and t.status <> 'done'
+    and t.due_date is not null and t.due_time is not null
+    and (t.due_date + t.due_time) - interval '12 hours' <= now()
+    and (t.due_date + t.due_time) > now() - interval '2 hours';
+
+  -- 12h — optional extra number
+  select net.http_post(
+    url := 'https://whatsapp-bot-production-120a.up.railway.app/api/send',
+    headers := '{"Content-Type":"application/json"}'::jsonb,
+    body := jsonb_build_object(
+      'phone', t.reminder_extra_phone,
+      'message', format('תזכורת (12 שעות מראש): %s — %s ב-%s בשעה %s',
+        t.title, a.display_name, to_char(t.due_date,'DD/MM'), to_char(t.due_time,'HH24:MI')),
+      'source', 'רכישת דירה'
+    )
+  )
+  from tasks t join apartments a on a.id = t.apartment_id
+  where t.remind_12h and t.reminder_12h_sent_at is null and t.status <> 'done'
+    and t.reminder_extra_phone is not null
+    and t.due_date is not null and t.due_time is not null
+    and (t.due_date + t.due_time) - interval '12 hours' <= now()
+    and (t.due_date + t.due_time) > now() - interval '2 hours';
+
+  update tasks set reminder_12h_sent_at = now()
+  where remind_12h and reminder_12h_sent_at is null and status <> 'done'
+    and due_date is not null and due_time is not null
+    and (due_date + due_time) - interval '12 hours' <= now()
+    and (due_date + due_time) > now() - interval '2 hours';
+
+  -- 3h — primary number
+  select net.http_post(
+    url := 'https://whatsapp-bot-production-120a.up.railway.app/api/send',
+    headers := '{"Content-Type":"application/json"}'::jsonb,
+    body := jsonb_build_object(
+      'phone', '972509143496',
+      'message', format('תזכורת (3 שעות מראש): %s — %s ב-%s בשעה %s',
+        t.title, a.display_name, to_char(t.due_date,'DD/MM'), to_char(t.due_time,'HH24:MI')),
+      'source', 'רכישת דירה'
+    )
+  )
+  from tasks t join apartments a on a.id = t.apartment_id
+  where t.remind_3h and t.reminder_3h_sent_at is null and t.status <> 'done'
+    and t.due_date is not null and t.due_time is not null
+    and (t.due_date + t.due_time) - interval '3 hours' <= now()
+    and (t.due_date + t.due_time) > now() - interval '2 hours';
+
+  -- 3h — optional extra number
+  select net.http_post(
+    url := 'https://whatsapp-bot-production-120a.up.railway.app/api/send',
+    headers := '{"Content-Type":"application/json"}'::jsonb,
+    body := jsonb_build_object(
+      'phone', t.reminder_extra_phone,
+      'message', format('תזכורת (3 שעות מראש): %s — %s ב-%s בשעה %s',
+        t.title, a.display_name, to_char(t.due_date,'DD/MM'), to_char(t.due_time,'HH24:MI')),
+      'source', 'רכישת דירה'
+    )
+  )
+  from tasks t join apartments a on a.id = t.apartment_id
+  where t.remind_3h and t.reminder_3h_sent_at is null and t.status <> 'done'
+    and t.reminder_extra_phone is not null
+    and t.due_date is not null and t.due_time is not null
+    and (t.due_date + t.due_time) - interval '3 hours' <= now()
+    and (t.due_date + t.due_time) > now() - interval '2 hours';
+
+  update tasks set reminder_3h_sent_at = now()
+  where remind_3h and reminder_3h_sent_at is null and status <> 'done'
+    and due_date is not null and due_time is not null
+    and (due_date + due_time) - interval '3 hours' <= now()
+    and (due_date + due_time) > now() - interval '2 hours';
+$$;
+
+revoke all on function public.send_due_reminders() from public, anon, authenticated;
+
+-- ===== RPC: send an immediate WhatsApp update for one task (used by the "שלח עכשיו" checkbox) =====
+create or replace function public.send_task_reminder_now(p_task_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_caller uuid;
+  v_msg text;
+  v_task record;
+begin
+  select member_id into v_caller from sessions where auth_uid = auth.uid() and expires_at > now();
+  if v_caller is null then
+    raise exception 'לא מחובר' using errcode = 'P0001';
+  end if;
+
+  select t.title, t.due_date, t.due_time, t.reminder_extra_phone, a.display_name as apt_name
+  into v_task
+  from tasks t join apartments a on a.id = t.apartment_id
+  where t.id = p_task_id;
+
+  if v_task.title is null then
+    raise exception 'משימה לא נמצאה' using errcode = 'P0001';
+  end if;
+
+  v_msg := format('עדכון: %s — %s%s',
+    v_task.title, v_task.apt_name,
+    case when v_task.due_date is not null then format(' (%s%s)',
+      to_char(v_task.due_date, 'DD/MM'),
+      case when v_task.due_time is not null then ' בשעה ' || to_char(v_task.due_time, 'HH24:MI') else '' end)
+    else '' end);
+
+  perform net.http_post(
+    url := 'https://whatsapp-bot-production-120a.up.railway.app/api/send',
+    headers := '{"Content-Type":"application/json"}'::jsonb,
+    body := jsonb_build_object('phone', '972509143496', 'message', v_msg, 'source', 'רכישת דירה')
+  );
+
+  if v_task.reminder_extra_phone is not null then
+    perform net.http_post(
+      url := 'https://whatsapp-bot-production-120a.up.railway.app/api/send',
+      headers := '{"Content-Type":"application/json"}'::jsonb,
+      body := jsonb_build_object('phone', v_task.reminder_extra_phone, 'message', v_msg, 'source', 'רכישת דירה')
+    );
+  end if;
+end;
+$$;
+
+revoke all on function public.send_task_reminder_now(uuid) from public;
+grant execute on function public.send_task_reminder_now(uuid) to anon, authenticated;

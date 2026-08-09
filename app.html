@@ -1228,6 +1228,10 @@ function openTaskModal(existing, defaultCategory) {
       <div class="reminder-row" data-key="remind_12h"><button type="button" class="checkbox${existing?.remind_12h ? ' checked' : ''}"></button><span>12 שעות לפני</span></div>
       <div class="reminder-row" data-key="remind_3h"><button type="button" class="checkbox${existing?.remind_3h ? ' checked' : ''}"></button><span>3 שעות לפני</span></div>
     </div>
+    <div class="field"><label>טלפון נוסף לתזכורת (אופציונלי)</label><input type="tel" id="mReminderExtraPhone" value="${isEdit ? escapeHtml(existing.reminder_extra_phone || '') : ''}" placeholder="לדוגמה: 0501234567"></div>
+    <div class="field">
+      <div class="reminder-row" data-key="send_now"><button type="button" class="checkbox"></button><span>📤 שלח עכשיו בוואטסאפ עם השמירה</span></div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost btn-block" id="mCancel">ביטול</button>
       <button class="btn btn-gold btn-block" id="mSave">שמירה</button>
@@ -1259,6 +1263,8 @@ function openTaskModal(existing, defaultCategory) {
     const dueTime = $('#mDueTime').value || null;
     const costVal = $('#mTaskCost').value;
     const cost = costVal === '' ? null : parseFloat(costVal);
+    const extraPhoneRaw = $('#mReminderExtraPhone').value.trim();
+    const sendNow = document.querySelector('.reminder-row[data-key="send_now"] .checkbox').classList.contains('checked');
     if (!title) { toast('נא למלא כותרת', true); return; }
 
     const payload = {
@@ -1267,19 +1273,34 @@ function openTaskModal(existing, defaultCategory) {
       remind_24h: document.querySelector('.reminder-row[data-key="remind_24h"] .checkbox').classList.contains('checked'),
       remind_12h: document.querySelector('.reminder-row[data-key="remind_12h"] .checkbox').classList.contains('checked'),
       remind_3h: document.querySelector('.reminder-row[data-key="remind_3h"] .checkbox').classList.contains('checked'),
+      reminder_extra_phone: extraPhoneRaw ? normalizeIsraeliPhone(extraPhoneRaw) : null,
     };
-    let error;
+    let error, savedId;
     if (isEdit) {
       ({ error } = await supabase.from('tasks').update(payload).eq('id', existing.id));
+      savedId = existing.id;
     } else {
       payload.added_by_member_id = state.member.id;
       payload.status = 'idea';
-      ({ error } = await supabase.from('tasks').insert(payload));
+      const res = await supabase.from('tasks').insert(payload).select('id').single();
+      error = res.error;
+      savedId = res.data?.id;
     }
     if (error) { toast('שגיאה בשמירה', true); return; }
     closeModal();
     await loadAllData(); renderCurrentView(); toast('נשמר בהצלחה');
+    if (sendNow && savedId) {
+      const { error: sendErr } = await supabase.rpc('send_task_reminder_now', { p_task_id: savedId });
+      if (sendErr) toast('נשמר, אך שליחת הוואטסאפ נכשלה', true);
+      else toast('נשלח בוואטסאפ!');
+    }
   });
+}
+
+function normalizeIsraeliPhone(raw) {
+  let digits = raw.replace(/\D/g, '');
+  if (digits.startsWith('0')) digits = '972' + digits.slice(1);
+  return digits;
 }
 
 // ===================== DOCUMENTS =====================
