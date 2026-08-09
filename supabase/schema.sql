@@ -799,3 +799,103 @@ $$;
 
 revoke all on function public.add_family(text, jsonb) from public;
 grant execute on function public.add_family(text, jsonb) to anon, authenticated;
+
+-- DIRA-CHANGE migration 005: WhatsApp reminder scheduling (pg_cron + pg_net)
+-- Project: dira-change (ref bjicskzwuiojhqdwfyov) only.
+--
+-- Sends a WhatsApp message via the user's own self-hosted bot
+-- (POST https://whatsapp-bot-production-120a.up.railway.app/api/send,
+-- body {phone, message, source}) when a task's chosen reminder threshold
+-- (24h / 12h / 3h before due_date+due_time) is crossed. Runs entirely
+-- server-side via pg_cron, independent of the app being open.
+
+create extension if not exists pg_cron with schema extensions;
+create extension if not exists pg_net with schema extensions;
+
+alter table tasks add column if not exists reminder_24h_sent_at timestamptz;
+alter table tasks add column if not exists reminder_12h_sent_at timestamptz;
+alter table tasks add column if not exists reminder_3h_sent_at timestamptz;
+
+create or replace function public.send_due_reminders()
+returns void
+language sql
+security definer
+set search_path = public, extensions
+as $$
+  -- 24h
+  select net.http_post(
+    url := 'https://whatsapp-bot-production-120a.up.railway.app/api/send',
+    headers := '{"Content-Type":"application/json"}'::jsonb,
+    body := jsonb_build_object(
+      'phone', '972509143496',
+      'message', format('תזכורת (24 שעות מראש): %s — %s ב-%s בשעה %s',
+        t.title, a.display_name, to_char(t.due_date,'DD/MM'), to_char(t.due_time,'HH24:MI')),
+      'source', 'רכישת דירה'
+    )
+  )
+  from tasks t join apartments a on a.id = t.apartment_id
+  where t.remind_24h and t.reminder_24h_sent_at is null and t.status <> 'done'
+    and t.due_date is not null and t.due_time is not null
+    and (t.due_date + t.due_time) - interval '24 hours' <= now()
+    and (t.due_date + t.due_time) > now() - interval '2 hours';
+
+  update tasks set reminder_24h_sent_at = now()
+  where remind_24h and reminder_24h_sent_at is null and status <> 'done'
+    and due_date is not null and due_time is not null
+    and (due_date + due_time) - interval '24 hours' <= now()
+    and (due_date + due_time) > now() - interval '2 hours';
+
+  -- 12h
+  select net.http_post(
+    url := 'https://whatsapp-bot-production-120a.up.railway.app/api/send',
+    headers := '{"Content-Type":"application/json"}'::jsonb,
+    body := jsonb_build_object(
+      'phone', '972509143496',
+      'message', format('תזכורת (12 שעות מראש): %s — %s ב-%s בשעה %s',
+        t.title, a.display_name, to_char(t.due_date,'DD/MM'), to_char(t.due_time,'HH24:MI')),
+      'source', 'רכישת דירה'
+    )
+  )
+  from tasks t join apartments a on a.id = t.apartment_id
+  where t.remind_12h and t.reminder_12h_sent_at is null and t.status <> 'done'
+    and t.due_date is not null and t.due_time is not null
+    and (t.due_date + t.due_time) - interval '12 hours' <= now()
+    and (t.due_date + t.due_time) > now() - interval '2 hours';
+
+  update tasks set reminder_12h_sent_at = now()
+  where remind_12h and reminder_12h_sent_at is null and status <> 'done'
+    and due_date is not null and due_time is not null
+    and (due_date + due_time) - interval '12 hours' <= now()
+    and (due_date + due_time) > now() - interval '2 hours';
+
+  -- 3h
+  select net.http_post(
+    url := 'https://whatsapp-bot-production-120a.up.railway.app/api/send',
+    headers := '{"Content-Type":"application/json"}'::jsonb,
+    body := jsonb_build_object(
+      'phone', '972509143496',
+      'message', format('תזכורת (3 שעות מראש): %s — %s ב-%s בשעה %s',
+        t.title, a.display_name, to_char(t.due_date,'DD/MM'), to_char(t.due_time,'HH24:MI')),
+      'source', 'רכישת דירה'
+    )
+  )
+  from tasks t join apartments a on a.id = t.apartment_id
+  where t.remind_3h and t.reminder_3h_sent_at is null and t.status <> 'done'
+    and t.due_date is not null and t.due_time is not null
+    and (t.due_date + t.due_time) - interval '3 hours' <= now()
+    and (t.due_date + t.due_time) > now() - interval '2 hours';
+
+  update tasks set reminder_3h_sent_at = now()
+  where remind_3h and reminder_3h_sent_at is null and status <> 'done'
+    and due_date is not null and due_time is not null
+    and (due_date + due_time) - interval '3 hours' <= now()
+    and (due_date + due_time) > now() - interval '2 hours';
+$$;
+
+revoke all on function public.send_due_reminders() from public, anon, authenticated;
+
+select cron.schedule(
+  'send-due-reminders',
+  '*/15 * * * *',
+  $$select public.send_due_reminders();$$
+);
